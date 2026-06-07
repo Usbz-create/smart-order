@@ -332,10 +332,10 @@ function renderHistory(orders) {
   if (paySection) {
     if (grandTotal > 0 && !hasActive) {
       if (billAlreadyRequested) {
-        paySection.innerHTML = `<div style="text-align:center;padding:20px 16px;background:#f0f4ff;border-radius:12px;margin-top:16px;border:1px solid #c7d2fe;">
-          <p style="font-size:28px;margin:0 0 8px;">🧾</p>
-          <p style="font-weight:700;color:#4f46e5;font-size:16px;margin:0 0 6px;">Please pay at the counter</p>
-          <p style="color:#666;font-size:13px;margin:0;">Thank you for dining with us!</p>
+        paySection.innerHTML = `<div style="text-align:center;padding:24px 16px;background:#f0f4ff;border-radius:12px;margin-top:16px;border:2px solid #c7d2fe;">
+          <p style="font-size:40px;margin:0 0 10px;">🧾</p>
+          <p style="font-weight:800;color:#4f46e5;font-size:19px;margin:0 0 8px;">📲 Please show this page at the counter</p>
+          <p style="color:#888;font-size:12px;margin:0;">Thank you for dining with us! 🙏</p>
         </div>`;
       } else {
         paySection.innerHTML = `<div style="margin-top:20px;">
