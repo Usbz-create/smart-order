@@ -23,6 +23,15 @@
 
     <!-- Menu tab -->
     <div id="menu-tab" style="padding-bottom:100px;">
+
+      <!-- Category filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="cat-btn active" onclick="filterCategory('all', this)"    style="padding:8px 16px;border-radius:20px;border:2px solid #2a74f0;background:#2a74f0;color:white;font-weight:700;font-size:13px;cursor:pointer;">🍽️ All</button>
+        <button class="cat-btn"        onclick="filterCategory('food', this)"   style="padding:8px 16px;border-radius:20px;border:2px solid #e0e7ff;background:#f0f4ff;color:#3a4560;font-weight:700;font-size:13px;cursor:pointer;">🌯 Food</button>
+        <button class="cat-btn"        onclick="filterCategory('drinks', this)" style="padding:8px 16px;border-radius:20px;border:2px solid #e0e7ff;background:#f0f4ff;color:#3a4560;font-weight:700;font-size:13px;cursor:pointer;">🥤 Drinks</button>
+        <button class="cat-btn"        onclick="filterCategory('extras', this)" style="padding:8px 16px;border-radius:20px;border:2px solid #e0e7ff;background:#f0f4ff;color:#3a4560;font-weight:700;font-size:13px;cursor:pointer;">🧁 Extras</button>
+      </div>
+
       <div class="menu-grid" id="menu-container"><p style="color:#888;">Loading menu…</p></div>
       <button class="call-waiter-btn" id="waiter-btn" onclick="callWaiter()">🔔 Call Waiter</button>
     </div>

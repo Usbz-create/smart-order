@@ -78,10 +78,10 @@
           sess.flatMap(o => o.items).forEach(i => { if (!merged[i.name]) merged[i.name] = 0; merged[i.name] += i.quantity; });
           const summary = Object.entries(merged).map(([n, q]) => n + ' ×' + q).join(', ');
           return `<article class="order-card" style="border-left:4px solid #8e44ad;background:#fdf8ff;">
-            <p style="font-size:20px;font-weight:700;margin:0 0 4px;">Table ${table}</p>
-            <p style="color:#999;font-size:11px;margin:0 0 8px;font-family:monospace;">Session: ${sid}</p>
-            <p style="color:#666;font-size:13px;margin:0 0 10px;">${summary}</p>
-            <p style="font-size:24px;font-weight:700;color:#8e44ad;margin:0 0 16px;">Rs ${total.toFixed(2)}</p>
+            <p style="font-size:26px;font-weight:700;margin:0 0 6px;">Table ${table}</p>
+            <p style="color:#999;font-size:13px;margin:0 0 8px;font-family:monospace;">Session: ${sid}</p>
+            <p style="color:#666;font-size:18px;margin:0 0 12px;">${summary}</p>
+            <p style="font-size:30px;font-weight:700;color:#8e44ad;margin:0 0 16px;">Rs ${total.toFixed(2)}</p>
             <button onclick="startConfirm('${table}','${sid}',${total.toFixed(2)})"
               style="width:100%;padding:14px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">
               💳 Confirm Payment
