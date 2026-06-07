@@ -1,0 +1,97 @@
+requireRole('cook');
+
+const ordersContainer = document.getElementById('ordersContainer');
+const logoutBtn       = document.getElementById('logoutBtn');
+const resetOrdersForm = document.getElementById('resetOrdersForm');
+const resetMessage    = document.getElementById('resetMessage');
+
+function formatItems(items) {
+  if (!Array.isArray(items) || items.length === 0) return '<li>No items</li>';
+  return items.map(i =>
+    `<li><strong>${i.name}</strong> &times; ${i.quantity} <span style="color:#666;font-size:12px;">(Rs ${Number(i.unitPrice || 0).toFixed(2)} each)</span></li>`
+  ).join('');
+}
+
+async function updateOrderStatus(id, status) {
+  const r = await fetch(`/order/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (!r.ok) { const d = await r.json(); throw new Error(d.message || 'Failed to update order.'); }
+}
+
+function renderOrders(orders) {
+  const cookOrders = orders.filter(o => o.status === 'pending' || o.status === 'cooking');
+  if (!cookOrders.length) { ordersContainer.innerHTML = '<p class="empty">✅ All clear — no active orders right now.</p>'; return; }
+
+  // Sessions where customer pressed View Bill — visually block cook buttons
+  const blockedSessions = new Set(orders.filter(o => o.billRequested === 1).map(o => o.sessionId));
+
+  ordersContainer.innerHTML = cookOrders.map(order => {
+    const color   = order.status === 'cooking' ? '#e67e22' : '#3498db';
+    const label   = order.status === 'cooking' ? '🔥 Cooking' : '⏳ Pending';
+    const blocked = blockedSessions.has(order.sessionId);
+    const bs      = blocked ? 'opacity:.45;cursor:not-allowed;filter:grayscale(1)' : '';
+    const bt      = blocked ? 'title="Customer has requested the bill"' : '';
+    return `<article class="order-card" style="border-left:4px solid ${color};">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;">
+        <div>
+          <p style="margin:0 0 2px;"><strong>Order #${order.id}</strong> — Table <strong>${order.tableNumber}</strong></p>
+          <span class="status-badge" style="background:${color}20;color:${color};border:1px solid ${color}40;">${label}</span>
+          ${blocked ? '<span style="display:inline-block;margin-left:8px;background:#fff0f0;color:#c0392b;border:1px solid #f5c6cb;border-radius:6px;font-size:11px;font-weight:700;padding:2px 8px;vertical-align:middle;">🧾 Bill requested</span>' : ''}
+        </div>
+        <p style="margin:0;font-weight:700;color:#333;">Rs ${Number(order.totalPrice || 0).toFixed(2)}</p>
+      </div>
+      <p style="margin:12px 0 4px;font-weight:600;font-size:13px;color:#444;">🧾 Items to cook:</p>
+      <ul class="order-items" style="margin:0 0 12px;background:#f9f9f9;border-radius:8px;padding:10px 10px 10px 28px;">${formatItems(order.items)}</ul>
+      <div class="button-row">
+        ${order.status === 'pending' ? `<button class="secondary" data-id="${order.id}" data-action="cooking" style="${bs}" ${bt} ${blocked ? 'disabled' : ''}> 🍳 Start Cooking</button>` : ''}
+        <button class="success" data-id="${order.id}" data-action="ready" style="${bs}" ${bt} ${blocked ? 'disabled' : ''}>✅ Mark Ready</button>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+async function loadOrders() {
+  try {
+    const r      = await fetch('/orders');
+    const orders = await r.json();
+    renderOrders(orders);
+  } catch { ordersContainer.innerHTML = '<p class="empty">Failed to load orders.</p>'; }
+}
+
+ordersContainer.addEventListener('click', async e => {
+  const t = e.target.closest('button[data-id]');
+  if (!t) return;
+  const id = t.dataset.id, status = t.dataset.action;
+  if (!id || !status) return;
+  t.disabled = true;
+  try { await updateOrderStatus(id, status); await loadOrders(); }
+  catch (err) { alert(err.message); t.disabled = false; }
+});
+
+logoutBtn.addEventListener('click', () => { clearRole(); window.location.href = './index.html'; });
+
+resetOrdersForm.addEventListener('submit', async e => {
+  e.preventDefault();
+  resetMessage.className = 'message';
+  if (!confirm('This will clear all orders and reset IDs. Continue?')) return;
+  const pin = document.getElementById('cookPinInput').value.trim();
+  try {
+    const r = await fetch('/orders/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'cook', pin })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || 'Failed to reset orders.');
+    resetMessage.classList.add('ok');
+    resetMessage.textContent = d.message;
+    resetOrdersForm.reset();
+    await loadOrders();
+  } catch (err) { resetMessage.classList.add('error'); resetMessage.textContent = err.message; }
+});
+
+loadOrders();
+setInterval(loadOrders, 4000);

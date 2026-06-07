@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Digital Menu | Smart Order</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- QR gate: shown until a valid table param is detected -->
+  <div id="login-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:white;z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;">
+    <div style="font-size:72px;">📷</div>
+    <h1 style="margin:0;">Scan the QR Code</h1>
+    <p style="color:#666;margin:0;font-size:16px;max-width:280px;">Please scan the QR code on your table to start ordering.</p>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('menu', this)">🍜 Menu</button>
+      <button class="tab-btn"        onclick="showTab('history', this)">📋 My Orders</button>
+    </div>
+
+    <!-- Menu tab -->
+    <div id="menu-tab" style="padding-bottom:100px;">
+      <div class="menu-grid" id="menu-container"><p style="color:#888;">Loading menu…</p></div>
+      <button class="call-waiter-btn" id="waiter-btn" onclick="callWaiter()">🔔 Call Waiter</button>
+    </div>
+
+    <!-- Order history tab -->
+    <div id="history-tab" style="display:none;">
+      <div class="history-section" style="background:white;padding:20px;border-radius:15px;box-shadow:var(--shadow);">
+        <h3>⏳ In Progress</h3>
+        <div id="preparing-list"><p style="color:#888;">Nothing preparing right now.</p></div>
+        <hr style="margin:16px 0;border:none;border-top:1px solid #eee;" />
+        <h3>✅ Already Served</h3>
+        <div id="eaten-list"><p style="color:#888;">No items served yet.</p></div>
+        <h2 style="text-align:right;margin-top:16px;color:var(--green);">Total: Rs <span id="grand-total">0.00</span></h2>
+        <div id="pay-bill-section"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating cart button -->
+  <div class="cart-fab" onclick="toggleCart()">🛒 <span id="cart-count">0</span></div>
+
+  <!-- Cart panel -->
+  <div class="cart-panel" id="cart-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="margin:0;">Your Cart</h3>
+      <button onclick="toggleCart()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#666;">✕</button>
+    </div>
+    <div id="cart-items"><p style="color:#888;font-size:14px;">Cart is empty.</p></div>
+    <hr style="margin:10px 0;border:none;border-top:1px solid #eee;" />
+    <div style="display:flex;justify-content:space-between;margin:10px 0;">
+      <strong>Total:</strong><strong id="cart-total">Rs 0</strong>
+    </div>
+    <button onclick="placeOrder()" id="place-order-btn" class="btn-add" style="width:100%;padding:14px;font-size:15px;">Place Order</button>
+  </div>
+
+  <script src="/js/customer.js"></script>
+</body>
+</html>

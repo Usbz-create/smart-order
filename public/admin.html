@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | Smart Order</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+
+    <header class="hero dashboard-hero admin-role">
+      <div>
+        <h1>Admin Dashboard</h1>
+        <p class="subtitle">Update role passwords and customer menu items.</p>
+      </div>
+      <button id="logoutBtn" class="ghost">Logout</button>
+    </header>
+
+    <section class="card">
+      <h2>Change Staff Passwords</h2>
+      <form id="passwordForm" class="stack-form">
+        <label for="adminPinInput">Admin PIN</label>
+        <input id="adminPinInput" type="password" required />
+        <label for="targetRole">Target Role</label>
+        <select id="targetRole">
+          <option value="cook">Cook</option>
+          <option value="waiter">Waiter</option>
+          <option value="counter">Counter</option>
+        </select>
+        <label for="newPinInput">New PIN</label>
+        <input id="newPinInput" type="password" minlength="4" maxlength="20" required />
+        <button type="submit">Update Password</button>
+        <p id="passwordMessage" class="message"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Menu Management</h2>
+      <form id="addItemForm" class="role-form">
+        <input id="newItemName"  type="text"   placeholder="New item name" required />
+        <input id="newItemPrice" type="number" min="0" step="0.01" placeholder="Price" required />
+        <button type="submit">Add Item</button>
+      </form>
+      <p id="menuMessage" class="message"></p>
+      <div id="menuAdminList" class="orders"></div>
+    </section>
+
+    <nav class="card nav-links">
+      <a href="./sales.html">Today's Sales</a>
+      <a href="./index.html">Back to Role Selection</a>
+    </nav>
+
+  </main>
+  <script src="/js/auth.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

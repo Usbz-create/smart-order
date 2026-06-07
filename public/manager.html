@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manager Portal | Smart Order</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="history-section" style="background:white;padding:40px;border-radius:15px;box-shadow:var(--shadow);text-align:center;">
+      <h1>Today's Revenue</h1>
+
+      <div style="display:flex;justify-content:space-around;margin:30px 0;flex-wrap:wrap;gap:20px;">
+        <div>
+          <p style="margin:0 0 8px;color:#666;font-size:14px;text-transform:uppercase;letter-spacing:.5px;">Money Made</p>
+          <h2 id="rev-total" style="color:var(--green);font-size:44px;margin:0;">Rs 0</h2>
+        </div>
+        <div>
+          <p style="margin:0 0 8px;color:#666;font-size:14px;text-transform:uppercase;letter-spacing:.5px;">Orders Served</p>
+          <h2 id="ord-total" style="font-size:44px;margin:0;">0</h2>
+        </div>
+      </div>
+
+      <h3 style="text-align:left;margin-bottom:12px;">Today's Orders</h3>
+      <div id="sales-list" style="text-align:left;"><p style="color:#888;">Loading…</p></div>
+
+      <hr style="border:none;border-top:1px solid #eee;margin:24px 0;" />
+      <button onclick="resetDay()" class="call-waiter-btn" style="background:red;width:220px;max-width:100%;">🔒 Reset Day</button>
+      <p id="reset-msg" style="margin-top:10px;font-weight:600;color:#c00;"></p>
+    </div>
+  </div>
+
+  <script>
+    async function loadStats() {
+      try {
+        const r = await fetch('/manager/stats');
+        const d = await r.json();
+        document.getElementById('rev-total').innerText = 'Rs ' + Number(d.totalRevenue || 0).toFixed(2);
+        document.getElementById('ord-total').innerText = d.totalOrders || 0;
+      } catch {}
+    }
+
+    async function loadSales() {
+      const list = document.getElementById('sales-list');
+      try {
+        const r    = await fetch('/sales/today');
+        const d    = await r.json();
+        const rows = d.rows || [];
+        if (!rows.length) { list.innerHTML = '<p style="color:#888;">No served orders yet.</p>'; return; }
+        list.innerHTML = rows.map(r =>
+          `<div style="display:flex;justify-content:space-between;margin-bottom:8px;padding:8px;background:#f9f9f9;border-radius:8px;">
+            <span><strong>#${r.id}</strong> — Table ${r.tableNumber} <small style="color:#888;">${r.createdAt}</small></span>
+            <span style="font-weight:bold;color:var(--green);">Rs ${Number(r.totalPrice || 0).toFixed(2)}</span>
+          </div>`
+        ).join('');
+      } catch { list.innerHTML = '<p style="color:#c00;">Failed to load sales.</p>'; }
+    }
+
+    async function resetDay() {
+      if (!confirm('Clear ALL orders? This cannot be undone.')) return;
+      const msg = document.getElementById('reset-msg');
+      try {
+        const r = await fetch('/orders/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        const d = await r.json();
+        msg.style.color  = '#2b8a3e';
+        msg.innerText    = d.message || 'Day reset!';
+        loadStats(); loadSales();
+      } catch {
+        msg.style.color = '#c00';
+        msg.innerText   = 'Reset failed.';
+      }
+    }
+
+    loadStats();
+    loadSales();
+    setInterval(() => { loadStats(); loadSales(); }, 10000);
+  </script>
+</body>
+</html>

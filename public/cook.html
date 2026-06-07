@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cook Dashboard | Smart Order</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+
+    <header class="hero dashboard-hero cook-role">
+      <div>
+        <h1>Cook Dashboard</h1>
+        <p class="subtitle">Manage pending and cooking orders.</p>
+      </div>
+      <button id="logoutBtn" class="ghost">Logout</button>
+    </header>
+
+    <section class="card">
+      <h2>Active Orders</h2>
+      <div id="ordersContainer" class="orders"></div>
+    </section>
+
+    <section class="card">
+      <h2>Reset Daily Orders</h2>
+      <p class="small-note">Clears all orders and resets Order ID to 1.</p>
+      <form id="resetOrdersForm" class="role-form">
+        <input id="cookPinInput" type="password" placeholder="Cook PIN" required />
+        <button type="submit" class="danger">Reset Orders</button>
+      </form>
+      <p id="resetMessage" class="message"></p>
+    </section>
+
+    <nav class="card nav-links">
+      <a href="./sales.html">Today's Sales</a>
+      <a href="./index.html">Back to Role Selection</a>
+    </nav>
+
+  </main>
+  <script src="/js/auth.js"></script>
+  <script src="/js/cook.js"></script>
+</body>
+</html>

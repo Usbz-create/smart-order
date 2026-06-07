@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Waiter Dashboard | Smart Order</title>
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#2ecc71" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+
+    <header class="hero dashboard-hero waiter-role">
+      <div>
+        <h1>Waiter Dashboard</h1>
+        <p class="subtitle">View ready orders and mark them served.</p>
+      </div>
+      <button id="logoutBtn" class="ghost">Logout</button>
+    </header>
+
+    <!-- Notification permission banner -->
+    <div id="notif-banner" style="background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <span style="font-size:14px;">🔔 Tap <strong>Enable</strong> for order notifications.</span>
+      <button id="notif-btn" onclick="enableNotifications()" style="background:#ffc107;border:none;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:15px;">Enable</button>
+    </div>
+
+    <!-- PWA install banner -->
+    <div id="install-banner" style="display:none;background:#d4edff;border:1px solid #3498db;border-radius:10px;padding:12px 16px;margin-bottom:16px;align-items:center;gap:12px;">
+      <span style="font-size:14px;">📲 Install as app for better notifications.</span>
+      <button id="install-btn" onclick="installApp()" style="background:#3498db;color:white;border:none;border-radius:8px;padding:10px 18px;font-weight:700;cursor:pointer;white-space:nowrap;font-size:15px;">Install</button>
+    </div>
+
+    <section class="card">
+      <h2>Active Orders</h2>
+      <div id="ordersContainer" class="orders"></div>
+    </section>
+
+    <nav class="card nav-links">
+      <a href="/index.html">Back to Role Selection</a>
+    </nav>
+
+  </main>
+  <script src="/js/auth.js"></script>
+  <script src="/js/waiter.js"></script>
+</body>
+</html>

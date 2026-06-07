@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Login | Smart Order</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(160deg,#1e2d50,#2c3e6b);">
+
+  <div class="menu-card" style="width:320px;padding:32px 28px;text-align:center;">
+    <div style="font-size:44px;margin-bottom:12px;">🍽️</div>
+    <h2 style="margin:0 0 6px;">Smart Order</h2>
+    <p style="color:#666;margin:0 0 24px;font-size:14px;">Staff Login</p>
+
+    <div style="margin-bottom:12px;text-align:left;">
+      <label style="font-size:13px;font-weight:600;color:#444;">Role</label>
+      <select id="role" style="width:100%;padding:10px;margin-top:4px;border-radius:8px;border:1px solid #ccc;font-size:15px;">
+        <option value="cook">🍳 Cook</option>
+        <option value="waiter">🛎️ Waiter</option>
+        <option value="counter">🧾 Counter</option>
+        <option value="admin">🔧 Admin</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:20px;text-align:left;">
+      <label style="font-size:13px;font-weight:600;color:#444;">PIN</label>
+      <input type="password" id="pin" placeholder="Enter PIN"
+        style="width:100%;padding:10px;margin-top:4px;border-radius:8px;border:1px solid #ccc;font-size:15px;"
+        onkeydown="if(event.key==='Enter') login()" />
+    </div>
+
+    <button onclick="login()" class="btn-add" style="width:100%;padding:12px;font-size:16px;">Login →</button>
+    <p id="login-msg" style="margin-top:12px;font-size:13px;font-weight:600;color:#c00;min-height:18px;"></p>
+
+    <hr style="border:none;border-top:1px solid #eee;margin:20px 0 14px;" />
+    <a href="/customer.html" style="color:#3498db;font-size:14px;text-decoration:none;">I'm a Customer →</a>
+  </div>
+
+  <script>
+    async function login() {
+      const role = document.getElementById('role').value;
+      const pin  = document.getElementById('pin').value.trim();
+      const msg  = document.getElementById('login-msg');
+      msg.innerText = '';
+      if (!pin) { msg.innerText = 'Please enter your PIN.'; return; }
+      try {
+        const res  = await fetch('/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role, pin }) });
+        const data = await res.json();
+        if (!res.ok) { msg.innerText = data.message || 'Wrong PIN!'; return; }
+        localStorage.setItem('restaurantRole', role);
+        if      (role === 'admin')   location.href = '/admin.html';
+        else if (role === 'cook')    location.href = '/cook.html';
+        else if (role === 'counter') location.href = '/counter.html';
+        else                         location.href = '/waiter.html';
+      } catch {
+        msg.innerText = 'Login failed. Check your connection.';
+      }
+    }
+  </script>
+
+</body>
+</html>
