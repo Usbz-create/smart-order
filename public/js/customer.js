@@ -92,14 +92,21 @@ async function loadMenu() {
 
 function itemEmoji(name) {
   const n = name.toLowerCase();
-  if (n.includes('momo'))                    return '🥟';
-  if (n.includes('chow') || n.includes('noodle')) return '🍜';
-  if (n.includes('coke') || n.includes('drink'))  return '🥤';
-  if (n.includes('pizza'))                   return '🍕';
-  if (n.includes('burger'))                  return '🍔';
-  if (n.includes('rice'))                    return '🍚';
-  if (n.includes('chicken'))                 return '🍗';
-  return '🍽️';
+  if (n.includes('roll'))     return '&#x1F32F;';
+  if (n.includes('momo'))     return '&#x1F95F;';
+  if (n.includes('chow') || n.includes('noodle')) return '&#x1F35C;';
+  if (n.includes('fries') || n.includes('chips'))  return '&#x1F35F;';
+  if (n.includes('chicken'))  return '&#x1F357;';
+  if (n.includes('egg'))      return '&#x1F373;';
+  if (n.includes('bara'))     return '&#x1FAD3;';
+  if (n.includes('fokso'))    return '&#x1F372;';
+  if (n.includes('sausage'))  return '&#x1F32D;';
+  if (n.includes('tea') || n.includes('coffee') || n.includes('bubble')) return '&#x1F9CB;';
+  if (n.includes('coke') || n.includes('fanta') || n.includes('sprite') || n.includes('juice') || n.includes('pani')) return '&#x1F964;';
+  if (n.includes('red bull') || n.includes('x-treme')) return '&#x26A1;';
+  if (n.includes('kala') || n.includes('refresher')) return '&#x1F379;';
+  if (n.includes('topping') || n.includes('sauce') || n.includes('bbq')) return '&#x1F9C2;';
+  return '&#x1F37D;';
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────
