@@ -36,7 +36,7 @@ window.onload = async () => {
   if (!tableNumber) return; // show QR overlay
 
   document.getElementById('login-overlay').style.display = 'none';
-  document.getElementById('table-num').innerText = tableNumber;
+  document.getElementById('table-num').innerText = 'Table ' + tableNumber;
 
   // Validate or clear existing session
   if (sessionId) {
@@ -70,71 +70,36 @@ function showTab(tab, btn) {
 
 // ── Menu ──────────────────────────────────────────────────────────────────
 let menuLoaded = false;
-let allMenuItems = [];
-let activeCategory = 'all';
-
-const DRINKS_KEYWORDS = ['tea','coffee','coke','fanta','sprite','red bull','x-treme','jelly juice','pani','juice','bubble','milk tea','milk coffee','ice tea','kala khatta'];
-const EXTRAS_KEYWORDS = ['bbq','cheese topping','fries topping','sauce','topping'];
-
-function getCategory(name) {
-  const n = name.toLowerCase();
-  if (EXTRAS_KEYWORDS.some(k => n.includes(k))) return 'extras';
-  if (DRINKS_KEYWORDS.some(k => n.includes(k)))  return 'drinks';
-  return 'food';
-}
-
-function itemEmoji(name) {
-  const n = name.toLowerCase();
-  if (n.includes('roll'))   return '🌯';
-  if (n.includes('momo'))   return '🥟';
-  if (n.includes('chow') || n.includes('noodle')) return '🍜';
-  if (n.includes('fries') || n.includes('chips')) return '🍟';
-  if (n.includes('chicken')) return '🍗';
-  if (n.includes('egg'))    return '🍳';
-  if (n.includes('bara'))   return '🫓';
-  if (n.includes('fokso'))  return '🥘';
-  if (n.includes('sausage')) return '🌭';
-  if (n.includes('bubble') || n.includes('tea')) return '🧋';
-  if (n.includes('coffee')) return '☕';
-  if (n.includes('coke') || n.includes('fanta') || n.includes('sprite')) return '🥤';
-  if (n.includes('red bull') || n.includes('x-treme')) return '⚡';
-  if (n.includes('juice') || n.includes('pani')) return '💧';
-  if (n.includes('ice tea') || n.includes('kala')) return '🍹';
-  if (n.includes('topping') || n.includes('sauce')) return '🧂';
-  return '🍽️';
-}
-
-function renderMenu() {
-  const c = document.getElementById('menu-container');
-  const filtered = activeCategory === 'all' ? allMenuItems : allMenuItems.filter(i => getCategory(i.name) === activeCategory);
-  if (!filtered.length) { c.innerHTML = '<p style="color:#888;">No items in this category.</p>'; return; }
-  c.innerHTML = filtered.map(i => `<div class="menu-card">
-    <div style="font-size:32px;margin-bottom:6px;">${itemEmoji(i.name)}</div>
-    <h4 style="margin:0 0 4px;font-size:13px;">${i.name}</h4>
-    <p style="margin:0 0 10px;color:#666;">Rs ${Number(i.price).toFixed(2)}</p>
-    <button class="btn-add" onclick="addToCart('${i.name.replace(/'/g,"\\'")}',${i.price})">Add +</button>
-  </div>`).join('');
-}
-
-function filterCategory(cat, btn) {
-  activeCategory = cat;
-  document.querySelectorAll('.cat-btn').forEach(b => {
-    b.style.background = '#f0f4ff'; b.style.color = '#3a4560'; b.style.borderColor = '#e0e7ff';
-  });
-  btn.style.background = '#2a74f0'; btn.style.color = 'white'; btn.style.borderColor = '#2a74f0';
-  renderMenu();
-}
 
 async function loadMenu() {
   try {
     const r = await fetch('/menu');
     if (!r.ok) throw new Error();
-    allMenuItems = await r.json();
-    menuLoaded   = true;
-    renderMenu();
+    const items = await r.json();
+    menuLoaded = true;
+    const c = document.getElementById('menu-container');
+    if (!items.length) { c.innerHTML = '<p style="color:#888;">No items available.</p>'; return; }
+    c.innerHTML = items.map(i => `<div class="menu-card">
+      <div style="font-size:32px;margin-bottom:6px;">${itemEmoji(i.name)}</div>
+      <h4 style="margin:0 0 4px;">${i.name}</h4>
+      <p style="margin:0 0 10px;color:#666;">Rs ${Number(i.price).toFixed(2)}</p>
+      <button class="btn-add" onclick="addToCart('${i.name}',${i.price})">Add +</button>
+    </div>`).join('');
   } catch {
     if (!menuLoaded) setTimeout(loadMenu, 3000);
   }
+}
+
+function itemEmoji(name) {
+  const n = name.toLowerCase();
+  if (n.includes('momo'))                    return '🥟';
+  if (n.includes('chow') || n.includes('noodle')) return '🍜';
+  if (n.includes('coke') || n.includes('drink'))  return '🥤';
+  if (n.includes('pizza'))                   return '🍕';
+  if (n.includes('burger'))                  return '🍔';
+  if (n.includes('rice'))                    return '🍚';
+  if (n.includes('chicken'))                 return '🍗';
+  return '🍽️';
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────
