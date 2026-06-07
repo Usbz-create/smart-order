@@ -355,7 +355,7 @@ app.post("/table/:num/checkout", (req, res) => {
 
 app.patch("/admin/password", (req, res) => {
   const { adminPin, role, newPin } = req.body;
-  if (!["cook", "waiter", "counter"].includes(role))
+  if (!["cook", "waiter", "counter", "admin"].includes(role))
     return res.status(400).json({ message: "Invalid role." });
   if (!isValidPin(newPin))
     return res.status(400).json({ message: "New PIN must be 4-20 characters." });
@@ -363,7 +363,7 @@ app.patch("/admin/password", (req, res) => {
     if (authErr) return res.status(authErr.status).json({ message: authErr.message });
     db.run("UPDATE role_pins SET pin = ? WHERE role = ?", [newPin, role], err => {
       if (err) return res.status(500).json({ message: "Failed to update password." });
-      return res.json({ message: `${role} password updated.` });
+      return res.json({ message: `${role} PIN updated successfully.` });
     });
   });
 });
