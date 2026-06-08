@@ -22,11 +22,17 @@ const deviceId = getOrCreateDeviceId();
 const urlParams   = new URLSearchParams(window.location.search);
 const tableFromURL = urlParams.get('table');
 if (tableFromURL) {
-  const resolved   = TABLE_NAME_MAP[tableFromURL.toLowerCase()] || tableFromURL;
-  const storedTable = localStorage.getItem('tableNumber');
-  // Fresh QR scan for a different table — drop old session
-  if (storedTable && storedTable !== resolved) localStorage.removeItem('sessionId');
-  localStorage.setItem('tableNumber', resolved);
+  const resolved = TABLE_NAME_MAP[tableFromURL.toLowerCase()];
+  if (resolved) {
+    // Valid QR code word — accept it
+    const storedTable = localStorage.getItem('tableNumber');
+    if (storedTable && storedTable !== resolved) localStorage.removeItem('sessionId');
+    localStorage.setItem('tableNumber', resolved);
+  } else {
+    // Invalid or manually typed table param — clear and force QR scan
+    localStorage.removeItem('tableNumber');
+    localStorage.removeItem('sessionId');
+  }
 }
 let tableNumber = localStorage.getItem('tableNumber');
 let sessionId   = localStorage.getItem('sessionId') || null;
@@ -70,66 +76,21 @@ function showTab(tab, btn) {
 
 // ── Menu ──────────────────────────────────────────────────────────────────
 let menuLoaded = false;
-let allMenuItems = [];
-let activeCategory = 'all';
-
-const DRINKS_KEYWORDS = ['tea','coffee','coke','fanta','sprite','red bull','x-treme','jelly juice','pani','juice','bubble','milk tea','milk coffee','ice tea','kala khatta'];
-const EXTRAS_KEYWORDS = ['bbq','cheese topping','fries topping','sauce','topping'];
-
-function getCategory(name) {
-  const n = name.toLowerCase();
-  if (EXTRAS_KEYWORDS.some(k => n.includes(k))) return 'extras';
-  if (DRINKS_KEYWORDS.some(k => n.includes(k)))  return 'drinks';
-  return 'food';
-}
-
-function itemEmoji(name) {
-  const n = name.toLowerCase();
-  if (n.includes('roll'))     return '&#x1F32F;';
-  if (n.includes('momo'))     return '&#x1F95F;';
-  if (n.includes('chow') || n.includes('noodle')) return '&#x1F35C;';
-  if (n.includes('fries') || n.includes('chips'))  return '&#x1F35F;';
-  if (n.includes('chicken'))  return '&#x1F357;';
-  if (n.includes('egg'))      return '&#x1F373;';
-  if (n.includes('bara'))     return '&#x1FAD3;';
-  if (n.includes('fokso'))    return '&#x1F372;';
-  if (n.includes('sausage'))  return '&#x1F32D;';
-  if (n.includes('tea') || n.includes('coffee') || n.includes('bubble')) return '&#x1F9CB;';
-  if (n.includes('coke') || n.includes('fanta') || n.includes('sprite') || n.includes('juice') || n.includes('pani')) return '&#x1F964;';
-  if (n.includes('red bull') || n.includes('x-treme')) return '&#x26A1;';
-  if (n.includes('kala') || n.includes('refresher')) return '&#x1F379;';
-  if (n.includes('topping') || n.includes('sauce') || n.includes('bbq')) return '&#x1F9C2;';
-  return '&#x1F37D;';
-}
-
-function renderMenu() {
-  const c = document.getElementById('menu-container');
-  const filtered = activeCategory === 'all' ? allMenuItems : allMenuItems.filter(i => getCategory(i.name) === activeCategory);
-  if (!filtered.length) { c.innerHTML = '<p style="color:#888;">No items in this category.</p>'; return; }
-  c.innerHTML = filtered.map(i => `<div class="menu-card">
-    <div style="font-size:32px;margin-bottom:6px;">${itemEmoji(i.name)}</div>
-    <h4 style="margin:0 0 4px;font-size:13px;">${i.name}</h4>
-    <p style="margin:0 0 10px;color:#666;">Rs ${Number(i.price).toFixed(2)}</p>
-    <button class="btn-add" onclick="addToCart('${i.name.replace(/'/g,"\'")}',${i.price})">Add +</button>
-  </div>`).join('');
-}
-
-function filterCategory(cat, btn) {
-  activeCategory = cat;
-  document.querySelectorAll('.cat-btn').forEach(b => {
-    b.style.background = '#f0f4ff'; b.style.color = '#3a4560'; b.style.borderColor = '#e0e7ff';
-  });
-  btn.style.background = '#2a74f0'; btn.style.color = 'white'; btn.style.borderColor = '#2a74f0';
-  renderMenu();
-}
 
 async function loadMenu() {
   try {
     const r = await fetch('/menu');
     if (!r.ok) throw new Error();
-    allMenuItems = await r.json();
-    menuLoaded   = true;
-    renderMenu();
+    const items = await r.json();
+    menuLoaded = true;
+    const c = document.getElementById('menu-container');
+    if (!items.length) { c.innerHTML = '<p style="color:#888;">No items available.</p>'; return; }
+    c.innerHTML = items.map(i => `<div class="menu-card">
+      <div style="font-size:32px;margin-bottom:6px;">${itemEmoji(i.name)}</div>
+      <h4 style="margin:0 0 4px;">${i.name}</h4>
+      <p style="margin:0 0 10px;color:#666;">Rs ${Number(i.price).toFixed(2)}</p>
+      <button class="btn-add" onclick="addToCart('${i.name}',${i.price})">Add +</button>
+    </div>`).join('');
   } catch {
     if (!menuLoaded) setTimeout(loadMenu, 3000);
   }
@@ -414,6 +375,6 @@ function statusLabel(s) {
 
 // ── Polling ───────────────────────────────────────────────────────────────
 setInterval(() => {
-  if (!menuLoaded) loadMenu(); else renderMenu();
+  if (!menuLoaded) loadMenu();
   if (document.getElementById('history-tab').style.display !== 'none') loadTableHistory();
 }, 5000);
