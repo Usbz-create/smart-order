@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Counter | Smart Order</title>
+  <link rel="manifest" href="/manifest-counter.json" />
+  <meta name="theme-color" content="#8e44ad" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Counter" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -37,6 +41,12 @@
     </div>
   </div>
 
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW fail:', e));
+    }
+  </script>
   <script>
     if (localStorage.getItem('restaurantRole') !== 'counter') location.href = '/index.html';
 

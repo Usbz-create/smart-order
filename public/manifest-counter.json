@@ -1,0 +1,15 @@
+{
+  "name": "Smart Order - Counter",
+  "short_name": "Counter",
+  "start_url": "/counter.html",
+  "display": "standalone",
+  "background_color": "#fdf8ff",
+  "theme_color": "#8e44ad",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/857/857681.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

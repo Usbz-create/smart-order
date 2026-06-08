@@ -1,0 +1,15 @@
+{
+  "name": "Smart Order - Cook",
+  "short_name": "Cook",
+  "start_url": "/cook.html",
+  "display": "standalone",
+  "background_color": "#fff8ed",
+  "theme_color": "#f59f00",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/857/857681.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

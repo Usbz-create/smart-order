@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard | Smart Order</title>
+  <link rel="manifest" href="/manifest-admin.json" />
+  <meta name="theme-color" content="#6c3483" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Admin" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -53,6 +57,12 @@
     </nav>
 
   </main>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW fail:', e));
+    }
+  </script>
   <script src="/js/auth.js"></script>
   <script src="/js/admin.js"></script>
 </body>
