@@ -85,12 +85,15 @@ async function loadMenu() {
     menuLoaded = true;
     const c = document.getElementById('menu-container');
     if (!items.length) { c.innerHTML = '<p style="color:#888;">No items available.</p>'; return; }
-    c.innerHTML = items.map(i => `<div class="menu-card">
-      <div style="font-size:32px;margin-bottom:6px;">${itemEmoji(i.name)}</div>
-      <h4 style="margin:0 0 4px;">${i.name}</h4>
-      <p style="margin:0 0 10px;color:#666;">Rs ${Number(i.price).toFixed(2)}</p>
-      <button class="btn-add" onclick="addToCart('${i.name}',${i.price})">Add +</button>
-    </div>`).join('');
+    c.innerHTML = items.map(i => {
+      const cat = (i.category || guessCategory(i.name)).toLowerCase();
+      return `<div class="menu-card" data-category="${cat}">
+        <div style="font-size:32px;margin-bottom:6px;">${itemEmoji(i.name)}</div>
+        <h4 style="margin:0 0 4px;">${i.name}</h4>
+        <p style="margin:0 0 10px;color:#666;">Rs ${Number(i.price).toFixed(2)}</p>
+        <button class="btn-add" onclick="addToCart('${i.name}',${i.price})">Add +</button>
+      </div>`;
+    }).join('');
   } catch {
     if (!menuLoaded) setTimeout(loadMenu, 3000);
   }
@@ -115,7 +118,33 @@ function itemEmoji(name) {
   return '&#x1F37D;';
 }
 
-// ── Cart ──────────────────────────────────────────────────────────────────
+function guessCategory(name) {
+  const n = name.toLowerCase();
+  if (n.includes('coke') || n.includes('fanta') || n.includes('sprite') || n.includes('juice') ||
+      n.includes('pani') || n.includes('tea')   || n.includes('coffee') || n.includes('bubble') ||
+      n.includes('red bull') || n.includes('x-treme') || n.includes('kala') || n.includes('refresher')) {
+    return 'drinks';
+  }
+  if (n.includes('topping') || n.includes('sauce') || n.includes('bbq')) return 'extras';
+  return 'food';
+}
+
+function filterCategory(cat, btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => {
+    b.style.background   = '#f0f4ff';
+    b.style.color        = '#3a4560';
+    b.style.borderColor  = '#e0e7ff';
+  });
+  btn.style.background  = '#2a74f0';
+  btn.style.color       = 'white';
+  btn.style.borderColor = '#2a74f0';
+
+  document.querySelectorAll('#menu-container .menu-card').forEach(card => {
+    card.style.display = (cat === 'all' || card.dataset.category === cat) ? '' : 'none';
+  });
+}
+
+
 function totalCartItems() { return cart.reduce((s, i) => s + i.quantity, 0); }
 
 function addToCart(name, price) {
