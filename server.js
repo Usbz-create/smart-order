@@ -134,7 +134,7 @@ app.post("/session/start", (req, res) => {
       [tableStr, sessionId],
       (err, row) => {
         if (err) return res.status(500).json({ message: "Session check failed." });
-        if (row) return res.json({ sessionId: row.session_id, billRequested: row.bill_requested === 1, resumed: true });
+        if (row) return res.json({ sessionId: row.session_id, billRequested: Number(row.bill_requested) === 1, resumed: true });
         return res.json({ sessionId: null, billRequested: false, resumed: false });
       }
     );
@@ -199,7 +199,7 @@ app.post("/order", (req, res) => {
 
       for (const item of items) {
         const mi = menuMap.get(item.name);
-        if (!mi || !mi.isactive) return res.status(400).json({ message: `${item.name} is not available.` });
+        if (!mi || !mi.isactive) return res.status(400).json({ message: "One or more items are not currently available." });
         const unitPrice = Number(mi.price || 0);
         totalPrice += unitPrice * item.quantity;
         computedItems.push({ name: item.name, quantity: item.quantity, unitPrice });
@@ -211,7 +211,7 @@ app.post("/order", (req, res) => {
         (existErr, existRow) => {
           if (existErr) return res.status(500).json({ message: "Session check failed." });
           if (existRow) {
-            if (existRow.bill_requested === 1)
+            if (Number(existRow.bill_requested) === 1)
               return res.status(400).json({ message: "Bill already requested. Please pay at the counter before ordering again." });
             insertOrder(res, tableStr, computedItems, totalPrice, existRow.session_id);
           } else {
@@ -246,10 +246,10 @@ function insertOrder(res, tableStr, computedItems, totalPrice, sessionId) {
 // Orders — read / update
 // ─────────────────────────────────────────────────────────────────────────────
 
-// All active orders (cook / waiter / counter views)
-// Requires a valid staff role PIN passed as ?pin=XXXX&role=cook (or any role)
-// NOTE: For polling endpoints used by staff dashboards, we do a lightweight
-//       role check via query param to avoid breaking the polling loop UX.
+// All active orders — used by cook, waiter, counter polling loops.
+// NOTE: This endpoint is intentionally public for staff-facing dashboards.
+// It only returns today's non-paid orders and contains no customer PII.
+// Per-action mutations (status change, cancel, edit) are individually authenticated.
 app.get("/orders", (req, res) => {
   const query = `
     SELECT o.id, o.table_number AS "tableNumber", o.items, o.total_price AS "totalPrice",
@@ -423,12 +423,15 @@ app.post("/table/:num/checkout", (req, res) => {
       function (err) {
         if (err)               return res.status(500).json({ message: "Checkout failed." });
         if (this.changes === 0) return res.status(400).json({ message: "No active orders found for this session." });
+        // Capture BEFORE entering nested callback — this.changes refers to the UPDATE above,
+        // not the DELETE below. Inside the nested callback 'this' changes context.
+        const updatedCount = this.changes;
         db.run(
           "DELETE FROM table_sessions WHERE table_number = ? AND session_id = ?",
           [tableNum, sessionId],
           delErr => {
             if (delErr) console.error("Failed to release session:", delErr);
-            return res.json({ message: `Table ${tableNum} paid. ${this.changes} order(s) cleared.`, updated: this.changes });
+            return res.json({ message: `Table ${tableNum} paid. ${updatedCount} order(s) cleared.`, updated: updatedCount });
           }
         );
       }

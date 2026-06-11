@@ -59,6 +59,44 @@
       location.href = '/index.html';
     });
 
+    // ── PIN guard — re-ask if PIN was lost (e.g. page reload after tab close) ──
+    function getStoredPin() { return localStorage.getItem('staffPin_counter') || ''; }
+
+    function ensurePin() {
+      if (getStoredPin()) return true;
+      // PIN is gone — show re-entry prompt at top of page
+      const existing = document.getElementById('pin-reentry-banner');
+      if (!existing) {
+        const banner = document.createElement('div');
+        banner.id = 'pin-reentry-banner';
+        banner.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+        banner.innerHTML = `
+          <span style="font-size:14px;flex:1;">🔑 Session expired. Re-enter your Counter PIN to confirm payments.</span>
+          <input id="reentry-pin" type="password" placeholder="Counter PIN" maxlength="20"
+            style="padding:8px 12px;border:1px solid #ccc;border-radius:8px;font-size:15px;width:150px;" />
+          <button id="reentry-btn" style="padding:9px 18px;background:#8e44ad;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Confirm</button>
+          <span id="reentry-msg" style="color:#c00;font-size:13px;"></span>`;
+        document.querySelector('.container main, main.container, main').prepend(banner);
+
+        document.getElementById('reentry-btn').addEventListener('click', async () => {
+          const pin = document.getElementById('reentry-pin').value.trim();
+          const msg = document.getElementById('reentry-msg');
+          if (!pin) { msg.textContent = 'Enter your PIN.'; return; }
+          try {
+            const r = await fetch('/auth/login', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ role: 'counter', pin })
+            });
+            const d = await r.json();
+            if (!r.ok) { msg.textContent = d.message || 'Wrong PIN.'; return; }
+            localStorage.setItem('staffPin_counter', pin);
+            banner.remove();
+          } catch { msg.textContent = 'Login failed. Check connection.'; }
+        });
+      }
+      return false;
+    }
+
     function esc(str) {
       return String(str)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -85,7 +123,7 @@
 
         const billable = Object.keys(bySess).filter(k =>
           bySess[k].every(o => o.status === 'served' || o.status === 'ready') &&
-          bySess[k].some(o => o.billRequested === 1)
+          bySess[k].some(o => Number(o.billRequested) === 1)
         );
 
         if (!billable.length) { container.innerHTML = '<p class="empty">✅ No pending bills right now.</p>'; return; }
@@ -124,6 +162,7 @@
     }
 
     function startConfirm(table, sid, total) {
+      if (!ensurePin()) { alert('Please re-enter your Counter PIN first (see banner above).'); return; }
       pendingTable = table; pendingSession = sid;
       document.getElementById('modal-body').textContent = 'Table ' + table + ' — Rs ' + Number(total).toFixed(2) + '. Mark as paid?';
       document.getElementById('confirm-modal').style.display = 'flex';
@@ -138,7 +177,7 @@
 
     document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
       const table = pendingTable, sid = pendingSession;
-      const pin   = localStorage.getItem('staffPin_counter') || '';
+      const pin   = getStoredPin();
       closeModal();
       try {
         const res  = await fetch('/table/' + table + '/checkout', {

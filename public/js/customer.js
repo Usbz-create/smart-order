@@ -49,7 +49,7 @@ let tableNumber = localStorage.getItem('tableNumber');
 let sessionId   = localStorage.getItem('sessionId') || null;
 
 // ── Init ──────────────────────────────────────────────────────────────────
-window.onload = async () => {
+window.addEventListener('load', async () => {
   if (!tableNumber) return; // show QR overlay
 
   document.getElementById('login-overlay').style.display = 'none';
@@ -72,7 +72,7 @@ window.onload = async () => {
 
   loadMenu();
   loadTableHistory();
-};
+});
 
 // ── Tabs ──────────────────────────────────────────────────────────────────
 function showTab(tab, btn) {
@@ -397,7 +397,7 @@ function renderHistory(orders) {
   const paySection   = document.getElementById('pay-bill-section');
 
   let preparingHTML = '', eatenHTML = '', grandTotal = 0, hasActive = false;
-  const billAlreadyRequested = orders.some(o => o.billRequested === 1);
+  const billAlreadyRequested = orders.some(o => Number(o.billRequested) === 1);
 
   orders.forEach(o => {
     if (o.status === 'call_waiter') return;
