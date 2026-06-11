@@ -9,7 +9,14 @@ const PORT = process.env.PORT || 3000;
 const VALID_STATUSES = ["pending", "cooking", "ready", "served", "call_waiter", "paid"];
 
 // Table identifiers — Maori words, no sequence, not guessable
-const VALID_TABLES = new Set(["moana", "maunga", "awa", "ngahere", "repo", "rangi", "whenua", "makau"]);
+const VALID_TABLES = new Set([
+  "moana", "maunga", "awa", "ngahere", "repo",
+  "rangi", "whenua", "makau", "roto", "oneone",
+  "kapua", "hau", "ua", "marama", "ra",
+  "whetu", "kohu", "ngaru", "pohatu", "toka",
+  "mania", "puke", "waoku", "raorao", "manga",
+  "wai", "awaawa", "takutai", "pari", "ana"
+]);
 
 function isValidTable(t) {
   return typeof t === "string" && VALID_TABLES.has(t.trim().toLowerCase());
