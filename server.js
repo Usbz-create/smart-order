@@ -8,6 +8,13 @@ const PORT = process.env.PORT || 3000;
 
 const VALID_STATUSES = ["pending", "cooking", "ready", "served", "call_waiter", "paid"];
 
+// Table identifiers — Maori words, no sequence, not guessable
+const VALID_TABLES = new Set(["moana", "maunga", "awa", "ngahere", "repo", "rangi", "whenua", "makau"]);
+
+function isValidTable(t) {
+  return typeof t === "string" && VALID_TABLES.has(t.trim().toLowerCase());
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Security middleware
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,7 +133,10 @@ app.post("/session/start", (req, res) => {
   if (!tableNumber) return res.status(400).json({ message: "Table number is required." });
 
   const deviceId = rawDeviceId || "legacy";
-  const tableStr = String(tableNumber);
+  const tableStr = String(tableNumber).trim().toLowerCase();
+
+  if (!isValidTable(tableStr))
+    return res.status(400).json({ message: "Invalid table." });
 
   if (sessionId) {
     db.get(
@@ -152,7 +162,10 @@ app.post("/order", (req, res) => {
   if (!tableNumber) return res.status(400).json({ message: "Table number is required." });
 
   const deviceId = rawDeviceId2 || "legacy";
-  const tableStr = String(tableNumber);
+  const tableStr = String(tableNumber).trim().toLowerCase();
+
+  if (!isValidTable(tableStr))
+    return res.status(400).json({ message: "Invalid table." });
 
   // ── Call waiter ──────────────────────────────────────────────────────────
   if (isCallWaiter) {
@@ -393,9 +406,11 @@ app.post("/order/:id/cancel", (req, res) => {
 app.post("/table/:num/request-bill", (req, res) => {
   const { sessionId } = req.body;
   if (!sessionId) return res.status(400).json({ message: "Session ID required." });
+  const tableNum = String(req.params.num).trim().toLowerCase();
+  if (!isValidTable(tableNum)) return res.status(400).json({ message: "Invalid table." });
   db.run(
     "UPDATE table_sessions SET bill_requested = 1 WHERE table_number = ? AND session_id = ?",
-    [String(req.params.num), sessionId],
+    [tableNum, sessionId],
     function (err) {
       if (err)               return res.status(500).json({ message: "Failed to request bill." });
       if (this.changes === 0) return res.status(404).json({ message: "Session not found." });
@@ -406,8 +421,9 @@ app.post("/table/:num/request-bill", (req, res) => {
 
 // Counter confirms payment — requires counter PIN
 app.post("/table/:num/checkout", (req, res) => {
-  const tableNum = req.params.num;
+  const tableNum = String(req.params.num).trim().toLowerCase();
   const { sessionId, pin } = req.body;
+  if (!isValidTable(tableNum)) return res.status(400).json({ message: "Invalid table." });
   if (!sessionId) return res.status(400).json({ message: "Session ID is required for checkout." });
   if (!isValidPin(pin)) return res.status(401).json({ message: "Counter PIN required." });
 
