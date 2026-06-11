@@ -1,8 +1,12 @@
 let cart = [];
 const MAX_ITEMS = 10;
 const TABLE_NAME_MAP = {
-  un: '1', deux: '2', trois: '3', quatre: '4', cinq: '5',
-  six: '6', sept: '7', huit: '8', neuf: '9', dix: '10'
+  moana: '1',   maunga: '2',  awa: '3',     ngahere: '4',  repo: '5',
+  rangi: '6',   whenua: '7',  makau: '8',   roto: '9',     oneone: '10',
+  kapua: '11',  hau: '12',    ua: '13',     marama: '14',  ra: '15',
+  whetu: '16',  kohu: '17',   ngaru: '18',  pohatu: '19',  toka: '20',
+  mania: '21',  puke: '22',   waoku: '23',  raorao: '24',  manga: '25',
+  wai: '26',    awaawa: '27', takutai: '28', pari: '29',   ana: '30'
 };
 
 // ── XSS helper — escape any string before injecting into innerHTML ─────────
