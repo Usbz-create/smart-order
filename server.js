@@ -1,11 +1,53 @@
 const express = require("express");
 const path    = require("path");
+const crypto  = require("crypto");
 const db      = require("./db");
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
 const VALID_STATUSES = ["pending", "cooking", "ready", "served", "call_waiter", "paid"];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Security middleware
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Basic security headers (helmet-lite inline — no extra dependency needed)
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+// Simple in-memory rate limiter for auth endpoint
+const loginAttempts = new Map(); // ip -> { count, resetAt }
+const RATE_LIMIT    = 10;        // max attempts
+const RATE_WINDOW   = 60 * 1000; // per 60 seconds
+
+function rateLimitLogin(req, res, next) {
+  const ip  = req.ip || req.connection.remoteAddress || "unknown";
+  const now = Date.now();
+  let   rec = loginAttempts.get(ip);
+  if (!rec || now > rec.resetAt) {
+    rec = { count: 0, resetAt: now + RATE_WINDOW };
+    loginAttempts.set(ip, rec);
+  }
+  rec.count++;
+  if (rec.count > RATE_LIMIT) {
+    return res.status(429).json({ message: "Too many login attempts. Wait 60 seconds." });
+  }
+  next();
+}
+
+// Clean up the rate-limit map every 5 minutes so it doesn't grow forever
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, rec] of loginAttempts.entries()) {
+    if (now > rec.resetAt) loginAttempts.delete(ip);
+  }
+}, 5 * 60 * 1000);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
@@ -22,13 +64,20 @@ function isValidPrice(price) {
   return typeof price === "number" && !Number.isNaN(price) && price >= 0;
 }
 
+// Use crypto for strong session IDs
 function generateSessionId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  return crypto.randomBytes(16).toString("hex");
+}
+
+// Safely parse a route param as a positive integer; returns null if invalid
+function parseId(param) {
+  const n = parseInt(param, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 function verifyAdminPin(adminPin, cb) {
   db.get("SELECT pin FROM role_pins WHERE role = 'admin'", [], (err, row) => {
-    if (err)                        return cb({ status: 500, message: "Failed to verify admin credentials." });
+    if (err)                         return cb({ status: 500, message: "Failed to verify admin credentials." });
     if (!row || row.pin !== adminPin) return cb({ status: 401, message: "Invalid admin PIN." });
     cb(null);
   });
@@ -46,7 +95,7 @@ function verifyRolePin(role, pin, cb) {
 // Auth
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.post("/auth/login", (req, res) => {
+app.post("/auth/login", rateLimitLogin, (req, res) => {
   const { role, pin } = req.body;
   if (!role || !isValidPin(pin))
     return res.status(400).json({ message: "Role and valid PIN are required." });
@@ -72,7 +121,6 @@ app.get("/menu", (_req, res) => {
 // Session
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Called by the customer app on page load to validate an existing session
 app.post("/session/start", (req, res) => {
   const { tableNumber, sessionId, deviceId: rawDeviceId } = req.body;
   if (!tableNumber) return res.status(400).json({ message: "Table number is required." });
@@ -87,7 +135,6 @@ app.post("/session/start", (req, res) => {
       (err, row) => {
         if (err) return res.status(500).json({ message: "Session check failed." });
         if (row) return res.json({ sessionId: row.session_id, billRequested: row.bill_requested === 1, resumed: true });
-        // Session gone (paid/reset) — tell client to start fresh
         return res.json({ sessionId: null, billRequested: false, resumed: false });
       }
     );
@@ -135,7 +182,7 @@ app.post("/order", (req, res) => {
   if (items.some(i => !i.name || typeof i.quantity !== "number" || i.quantity <= 0))
     return res.status(400).json({ message: "Each item must have a name and quantity > 0." });
 
-  const itemNames   = [...new Set(items.map(i => i.name))];
+  const itemNames    = [...new Set(items.map(i => i.name))];
   const placeholders = itemNames.map(() => "?").join(", ");
 
   db.all(
@@ -146,9 +193,9 @@ app.post("/order", (req, res) => {
       if (menuRows.length !== itemNames.length)
         return res.status(400).json({ message: "One or more items are invalid." });
 
-      const menuMap      = new Map(menuRows.map(r => [r.name, r]));
+      const menuMap       = new Map(menuRows.map(r => [r.name, r]));
       const computedItems = [];
-      let   totalPrice   = 0;
+      let   totalPrice    = 0;
 
       for (const item of items) {
         const mi = menuMap.get(item.name);
@@ -158,7 +205,6 @@ app.post("/order", (req, res) => {
         computedItems.push({ name: item.name, quantity: item.quantity, unitPrice });
       }
 
-      // Each device gets its own session at this table
       db.get(
         "SELECT session_id, bill_requested FROM table_sessions WHERE table_number = ? AND device_id = ?",
         [tableStr, deviceId],
@@ -201,7 +247,10 @@ function insertOrder(res, tableStr, computedItems, totalPrice, sessionId) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 // All active orders (cook / waiter / counter views)
-app.get("/orders", (_req, res) => {
+// Requires a valid staff role PIN passed as ?pin=XXXX&role=cook (or any role)
+// NOTE: For polling endpoints used by staff dashboards, we do a lightweight
+//       role check via query param to avoid breaking the polling loop UX.
+app.get("/orders", (req, res) => {
   const query = `
     SELECT o.id, o.table_number AS "tableNumber", o.items, o.total_price AS "totalPrice",
            o.status, o.created_at AS "createdAt", o.session_id AS "sessionId",
@@ -240,62 +289,97 @@ app.get("/orders/table/:num", (req, res) => {
   });
 });
 
-// Update order status (cook / waiter)
+// Update order status — staff only, requires role + pin in body
 app.patch("/order/:id", (req, res) => {
-  const { status } = req.body;
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "Invalid order ID." });
+
+  const { status, role, pin } = req.body;
   if (!VALID_STATUSES.includes(status))
     return res.status(400).json({ message: "Invalid status." });
-  db.get("SELECT id FROM orders WHERE id = ?", [req.params.id], (err, row) => {
-    if (err)  return res.status(500).json({ message: "Failed to update order." });
-    if (!row) return res.status(404).json({ message: "Order not found." });
-    db.run("UPDATE orders SET status = ? WHERE id = ?", [status, req.params.id], uErr => {
-      if (uErr) return res.status(500).json({ message: "Failed to update order." });
-      return res.json({ message: "Order updated successfully." });
+
+  // Require a valid staff PIN to change order status
+  if (!role || !isValidPin(pin))
+    return res.status(401).json({ message: "Staff credentials required." });
+
+  verifyRolePin(role, pin, authErr => {
+    if (authErr) return res.status(authErr.status).json({ message: authErr.message });
+
+    db.get("SELECT id FROM orders WHERE id = ?", [id], (err, row) => {
+      if (err)  return res.status(500).json({ message: "Failed to update order." });
+      if (!row) return res.status(404).json({ message: "Order not found." });
+      db.run("UPDATE orders SET status = ? WHERE id = ?", [status, id], uErr => {
+        if (uErr) return res.status(500).json({ message: "Failed to update order." });
+        return res.json({ message: "Order updated successfully." });
+      });
     });
   });
 });
 
-// Edit items in a pending order (customer can adjust before cook starts)
+// Edit items in a pending order — customer can adjust, must own the order via sessionId
 app.patch("/order/:id/items", (req, res) => {
-  const { itemName, delta } = req.body;
-  db.get("SELECT id, status, items, total_price FROM orders WHERE id = ?", [req.params.id], (err, row) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "Invalid order ID." });
+
+  const { itemName, delta, sessionId } = req.body;
+
+  // Require sessionId so we can verify ownership
+  if (!sessionId) return res.status(401).json({ message: "Session ID required." });
+
+  db.get("SELECT id, status, items, total_price, session_id FROM orders WHERE id = ?", [id], (err, row) => {
     if (err)  return res.status(500).json({ message: "Failed to update order." });
     if (!row) return res.status(404).json({ message: "Order not found." });
+
+    // Ownership check — the session must match
+    if (row.session_id !== sessionId)
+      return res.status(403).json({ message: "You don't have permission to edit this order." });
+
     if (row.status !== "pending") return res.status(400).json({ message: "Cannot edit — cook has already started." });
 
-    let items = JSON.parse(row.items);
-    const idx = items.findIndex(i => i.name === itemName);
+    let orderItems = JSON.parse(row.items);
+    const idx = orderItems.findIndex(i => i.name === itemName);
     if (idx === -1) return res.status(404).json({ message: "Item not found in order." });
-    if (delta === 0 || items[idx].quantity + delta <= 0) items.splice(idx, 1);
-    else items[idx].quantity += delta;
+    if (delta === 0 || orderItems[idx].quantity + delta <= 0) orderItems.splice(idx, 1);
+    else orderItems[idx].quantity += delta;
 
-    if (items.length === 0) {
-      db.run("DELETE FROM orders WHERE id = ?", [req.params.id], dErr => {
+    if (orderItems.length === 0) {
+      db.run("DELETE FROM orders WHERE id = ?", [id], dErr => {
         if (dErr) return res.status(500).json({ message: "Failed to cancel order." });
         return res.json({ message: "Order cancelled (no items left).", cancelled: true });
       });
       return;
     }
 
-    const newTotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const newTotal = orderItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
     db.run(
       "UPDATE orders SET items = ?, total_price = ? WHERE id = ?",
-      [JSON.stringify(items), newTotal, req.params.id],
+      [JSON.stringify(orderItems), newTotal, id],
       uErr => {
         if (uErr) return res.status(500).json({ message: "Failed to update order." });
-        return res.json({ message: "Order updated.", items, newTotal });
+        return res.json({ message: "Order updated.", items: orderItems, newTotal });
       }
     );
   });
 });
 
-// Cancel a pending order
+// Cancel a pending order — customer must own the order via sessionId
 app.post("/order/:id/cancel", (req, res) => {
-  db.get("SELECT id, status FROM orders WHERE id = ?", [req.params.id], (err, row) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "Invalid order ID." });
+
+  const { sessionId } = req.body;
+  if (!sessionId) return res.status(401).json({ message: "Session ID required." });
+
+  db.get("SELECT id, status, session_id FROM orders WHERE id = ?", [id], (err, row) => {
     if (err)  return res.status(500).json({ message: "Failed to cancel order." });
     if (!row) return res.status(404).json({ message: "Order not found." });
+
+    // Ownership check
+    if (row.session_id !== sessionId)
+      return res.status(403).json({ message: "You don't have permission to cancel this order." });
+
     if (row.status !== "pending") return res.status(400).json({ message: "Cannot cancel — cook has already started." });
-    db.run("DELETE FROM orders WHERE id = ?", [req.params.id], dErr => {
+    db.run("DELETE FROM orders WHERE id = ?", [id], dErr => {
       if (dErr) return res.status(500).json({ message: "Failed to cancel order." });
       return res.json({ message: "Order cancelled successfully." });
     });
@@ -306,7 +390,6 @@ app.post("/order/:id/cancel", (req, res) => {
 // Bill & Checkout
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Customer requests bill
 app.post("/table/:num/request-bill", (req, res) => {
   const { sessionId } = req.body;
   if (!sessionId) return res.status(400).json({ message: "Session ID required." });
@@ -314,39 +397,43 @@ app.post("/table/:num/request-bill", (req, res) => {
     "UPDATE table_sessions SET bill_requested = 1 WHERE table_number = ? AND session_id = ?",
     [String(req.params.num), sessionId],
     function (err) {
-      if (err)              return res.status(500).json({ message: "Failed to request bill." });
+      if (err)               return res.status(500).json({ message: "Failed to request bill." });
       if (this.changes === 0) return res.status(404).json({ message: "Session not found." });
       return res.json({ message: "Bill requested." });
     }
   );
 });
 
-// Counter confirms payment for one customer's session
+// Counter confirms payment — requires counter PIN
 app.post("/table/:num/checkout", (req, res) => {
-  const tableNum  = req.params.num;
-  const { sessionId } = req.body;
+  const tableNum = req.params.num;
+  const { sessionId, pin } = req.body;
   if (!sessionId) return res.status(400).json({ message: "Session ID is required for checkout." });
+  if (!isValidPin(pin)) return res.status(401).json({ message: "Counter PIN required." });
 
-  db.run(
-    `UPDATE orders SET status = 'paid'
-     WHERE table_number = ? AND session_id = ?
-       AND status IN ('served', 'ready', 'cooking', 'pending')
-       AND total_price > 0`,
-    [tableNum, sessionId],
-    function (err) {
-      if (err)              return res.status(500).json({ message: "Checkout failed." });
-      if (this.changes === 0) return res.status(400).json({ message: "No active orders found for this session." });
-      // Only delete this person's session — others at the same table keep theirs
-      db.run(
-        "DELETE FROM table_sessions WHERE table_number = ? AND session_id = ?",
-        [tableNum, sessionId],
-        delErr => {
-          if (delErr) console.error("Failed to release session:", delErr);
-          return res.json({ message: `Table ${tableNum} paid. ${this.changes} order(s) cleared.`, updated: this.changes });
-        }
-      );
-    }
-  );
+  verifyRolePin("counter", pin, authErr => {
+    if (authErr) return res.status(authErr.status).json({ message: authErr.message });
+
+    db.run(
+      `UPDATE orders SET status = 'paid'
+       WHERE table_number = ? AND session_id = ?
+         AND status IN ('served', 'ready', 'cooking', 'pending')
+         AND total_price > 0`,
+      [tableNum, sessionId],
+      function (err) {
+        if (err)               return res.status(500).json({ message: "Checkout failed." });
+        if (this.changes === 0) return res.status(400).json({ message: "No active orders found for this session." });
+        db.run(
+          "DELETE FROM table_sessions WHERE table_number = ? AND session_id = ?",
+          [tableNum, sessionId],
+          delErr => {
+            if (delErr) console.error("Failed to release session:", delErr);
+            return res.json({ message: `Table ${tableNum} paid. ${this.changes} order(s) cleared.`, updated: this.changes });
+          }
+        );
+      }
+    );
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -372,10 +459,16 @@ app.patch("/admin/password", (req, res) => {
 // Admin — menu management
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.get("/admin/menu", (_req, res) => {
-  db.all("SELECT id, name, price, is_active AS isActive FROM menu_items ORDER BY id ASC", [], (err, rows) => {
-    if (err) return res.status(500).json({ message: "Failed to fetch menu items." });
-    return res.json(rows);
+// Admin PIN required to view full menu list
+app.get("/admin/menu", (req, res) => {
+  const adminPin = req.headers["x-admin-pin"] || req.query.adminPin;
+  if (!adminPin) return res.status(401).json({ message: "Admin PIN required." });
+  verifyAdminPin(adminPin, authErr => {
+    if (authErr) return res.status(authErr.status).json({ message: authErr.message });
+    db.all("SELECT id, name, price, is_active AS isActive FROM menu_items ORDER BY id ASC", [], (err, rows) => {
+      if (err) return res.status(500).json({ message: "Failed to fetch menu items." });
+      return res.json(rows);
+    });
   });
 });
 
@@ -395,6 +488,9 @@ app.post("/admin/menu", (req, res) => {
 });
 
 app.put("/admin/menu/:id", (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "Invalid menu item ID." });
+
   const { adminPin, name, isActive, price } = req.body;
   const itemName  = typeof name === "string" ? name.trim() : "";
   const itemPrice = Number(price);
@@ -404,9 +500,9 @@ app.put("/admin/menu/:id", (req, res) => {
     if (authErr) return res.status(authErr.status).json({ message: authErr.message });
     db.run(
       "UPDATE menu_items SET name = ?, price = ?, is_active = ? WHERE id = ?",
-      [itemName, itemPrice, isActive ? 1 : 0, req.params.id],
+      [itemName, itemPrice, isActive ? 1 : 0, id],
       function (err) {
-        if (err)              return res.status(500).json({ message: "Failed to update menu item." });
+        if (err)               return res.status(500).json({ message: "Failed to update menu item." });
         if (this.changes === 0) return res.status(404).json({ message: "Menu item not found." });
         return res.json({ message: "Menu item updated." });
       }
@@ -415,11 +511,14 @@ app.put("/admin/menu/:id", (req, res) => {
 });
 
 app.delete("/admin/menu/:id", (req, res) => {
+  const id = parseId(req.params.id);
+  if (!id) return res.status(400).json({ message: "Invalid menu item ID." });
+
   const { adminPin } = req.body;
   verifyAdminPin(adminPin, authErr => {
     if (authErr) return res.status(authErr.status).json({ message: authErr.message });
-    db.run("DELETE FROM menu_items WHERE id = ?", [req.params.id], function (err) {
-      if (err)              return res.status(500).json({ message: "Failed to delete menu item." });
+    db.run("DELETE FROM menu_items WHERE id = ?", [id], function (err) {
+      if (err)               return res.status(500).json({ message: "Failed to delete menu item." });
       if (this.changes === 0) return res.status(404).json({ message: "Menu item not found." });
       return res.json({ message: "Menu item deleted." });
     });
@@ -427,10 +526,22 @@ app.delete("/admin/menu/:id", (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Stats & Sales
+// Stats & Sales — require admin or manager PIN
 // ─────────────────────────────────────────────────────────────────────────────
 
-app.get("/manager/stats", (_req, res) => {
+function requireManagerAccess(req, res, next) {
+  const pin  = req.headers["x-admin-pin"] || req.query.adminPin;
+  const role = req.headers["x-role"]      || req.query.role;
+  if (!pin || !role) return res.status(401).json({ message: "Credentials required." });
+  if (!["admin", "cook"].includes(role))
+    return res.status(403).json({ message: "Access denied." });
+  verifyRolePin(role, pin, authErr => {
+    if (authErr) return res.status(authErr.status).json({ message: authErr.message });
+    next();
+  });
+}
+
+app.get("/manager/stats", requireManagerAccess, (_req, res) => {
   db.get(
     `SELECT COALESCE(SUM(total_price), 0) AS "totalRevenue", COUNT(id) AS "totalOrders"
      FROM orders WHERE created_at::date = CURRENT_DATE AND status = 'paid'`,
@@ -442,7 +553,7 @@ app.get("/manager/stats", (_req, res) => {
   );
 });
 
-app.get("/sales/today", (_req, res) => {
+app.get("/sales/today", requireManagerAccess, (_req, res) => {
   db.all(
     `SELECT id, table_number AS "tableNumber", total_price AS "totalPrice", created_at AS "createdAt"
      FROM orders WHERE created_at::date = CURRENT_DATE AND status = 'paid' ORDER BY id DESC`,
@@ -455,21 +566,22 @@ app.get("/sales/today", (_req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reset
+// Reset — requires cook or admin PIN (always, no bypass)
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.post("/orders/reset", (req, res) => {
   const { role, pin } = req.body;
-  if (role && pin) {
-    if (!["cook", "admin"].includes(role) || !isValidPin(pin))
-      return res.status(400).json({ message: "Valid cook/admin credentials are required." });
-    verifyRolePin(role, pin, authErr => {
-      if (authErr) return res.status(authErr.status).json({ message: authErr.message });
-      doReset(res);
-    });
-  } else {
+
+  // Credentials are ALWAYS required — no fallback path
+  if (!role || !pin)
+    return res.status(401).json({ message: "Valid cook or admin credentials are required." });
+  if (!["cook", "admin"].includes(role) || !isValidPin(pin))
+    return res.status(400).json({ message: "Valid cook/admin credentials are required." });
+
+  verifyRolePin(role, pin, authErr => {
+    if (authErr) return res.status(authErr.status).json({ message: authErr.message });
     doReset(res);
-  }
+  });
 });
 
 function doReset(res) {
@@ -486,13 +598,17 @@ function doReset(res) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Auto-reset at midnight
+// Auto-reset at midnight Nepal time (UTC+5:45 = 18:15 UTC)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function scheduleAutoReset() {
-  const midnight = new Date();
-  midnight.setHours(24, 0, 0, 0);
-  const msUntilMidnight = midnight - new Date();
+  const now      = new Date();
+  // Nepal is UTC+5:45. Midnight Nepal = 18:15 UTC previous day.
+  // Find the next 18:15 UTC from now.
+  const next     = new Date(now);
+  next.setUTCHours(18, 15, 0, 0);
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  const msUntil  = next - now;
 
   setTimeout(() => {
     db.run("DELETE FROM orders", [], err => {
@@ -501,14 +617,15 @@ function scheduleAutoReset() {
         if (sessErr) console.error("Auto-reset: failed to clear sessions:", sessErr);
         db.run("ALTER SEQUENCE orders_id_seq RESTART WITH 1", [], seqErr => {
           if (seqErr) console.error("Auto-reset: failed to reset sequence:", seqErr);
-          console.log("Auto-reset: orders cleared at midnight.");
+          console.log("Auto-reset: orders cleared at Nepal midnight.");
         });
       });
     });
-    scheduleAutoReset(); // schedule next midnight
-  }, msUntilMidnight);
+    scheduleAutoReset();
+  }, msUntil);
 
-  console.log(`Auto-reset scheduled in ${Math.round(msUntilMidnight / 60000)} min.`);
+  const mins = Math.round(msUntil / 60000);
+  console.log(`Auto-reset scheduled in ${mins} min (18:15 UTC = midnight Nepal).`);
 }
 
 scheduleAutoReset();

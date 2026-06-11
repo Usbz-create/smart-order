@@ -18,7 +18,7 @@
         <h1>🧾 Counter</h1>
         <p class="subtitle">Confirm payments for all tables.</p>
       </div>
-      <button onclick="logout()" class="ghost">Logout</button>
+      <button id="logoutBtn" class="ghost">Logout</button>
     </header>
 
     <section class="card">
@@ -35,22 +35,35 @@
       <h2 style="margin:0 0 8px;">Confirm Payment?</h2>
       <p style="color:#555;margin:0 0 24px;font-size:15px;" id="modal-body"></p>
       <div style="display:flex;gap:12px;">
-        <button onclick="closeModal()" style="flex:1;padding:14px;border:2px solid #ccc;background:white;border-radius:10px;font-size:15px;cursor:pointer;font-weight:600;color:#333;">✕ Cancel</button>
+        <button id="modal-cancel-btn" style="flex:1;padding:14px;border:2px solid #ccc;background:white;border-radius:10px;font-size:15px;cursor:pointer;font-weight:600;color:#333;">✕ Cancel</button>
         <button id="modal-confirm-btn" style="flex:1;padding:14px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:15px;cursor:pointer;font-weight:700;">✅ Confirm</button>
       </div>
     </div>
   </div>
-
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW fail:', e));
     }
   </script>
+  <script src="/js/auth.js"></script>
   <script>
-    if (localStorage.getItem('restaurantRole') !== 'counter') location.href = '/index.html';
+    // Use auth.js consistently — same as all other staff pages
+    requireRole('counter');
 
-    function logout() { localStorage.removeItem('restaurantRole'); location.href = '/index.html'; }
+    const role = getRole();
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('staffPin_' + role);
+      clearRole();
+      location.href = '/index.html';
+    });
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
 
     let pendingTable = null, pendingSession = null;
 
@@ -63,7 +76,6 @@
 
         const foodOrders = orders.filter(o => o.status !== 'call_waiter' && Array.isArray(o.items) && o.items.length > 0);
 
-        // Group by session — each person at a table is their own bill
         const bySess = {};
         foodOrders.forEach(o => {
           const key = o.tableNumber + '__' + o.sessionId;
@@ -71,7 +83,6 @@
           bySess[key].push(o);
         });
 
-        // Show sessions where ALL orders are served/ready AND customer pressed View Bill
         const billable = Object.keys(bySess).filter(k =>
           bySess[k].every(o => o.status === 'served' || o.status === 'ready') &&
           bySess[k].some(o => o.billRequested === 1)
@@ -86,25 +97,35 @@
           const total = sess.reduce((s, o) => s + Number(o.totalPrice || 0), 0);
           const merged = {};
           sess.flatMap(o => o.items).forEach(i => { if (!merged[i.name]) merged[i.name] = 0; merged[i.name] += i.quantity; });
-          const summary = Object.entries(merged).map(([n, q]) => n + ' ×' + q).join(', ');
-          return `<article class="order-card" style="border-left:4px solid #8e44ad;background:#fdf8ff;">
-            <p style="font-size:26px;font-weight:700;margin:0 0 6px;">Table ${table}</p>
-            <p style="color:#999;font-size:13px;margin:0 0 8px;font-family:monospace;">Session: ${sid}</p>
+          const summary = Object.entries(merged).map(([n, q]) => esc(n) + ' ×' + q).join(', ');
+          // Store table/session in data attributes — no inline onclick with string interpolation
+          return `<article class="order-card" style="border-left:4px solid #8e44ad;background:#fdf8ff;"
+                    data-table="${esc(String(table))}" data-session="${esc(String(sid))}" data-total="${total.toFixed(2)}">
+            <p style="font-size:26px;font-weight:700;margin:0 0 6px;">Table ${esc(String(table))}</p>
+            <p style="color:#999;font-size:13px;margin:0 0 8px;font-family:monospace;">Session: ${esc(String(sid))}</p>
             <p style="color:#666;font-size:18px;margin:0 0 12px;">${summary}</p>
             <p style="font-size:30px;font-weight:700;color:#8e44ad;margin:0 0 16px;">Rs ${total.toFixed(2)}</p>
-            <button onclick="startConfirm('${table}','${sid}',${total.toFixed(2)})"
+            <button class="confirm-payment-btn"
               style="width:100%;padding:14px;background:#8e44ad;color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">
               💳 Confirm Payment
             </button>
           </article>`;
         }).join('');
+
+        // Event delegation — no inline onclick with raw session data
+        container.querySelectorAll('.confirm-payment-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const card = btn.closest('article');
+            startConfirm(card.dataset.table, card.dataset.session, Number(card.dataset.total));
+          });
+        });
+
       } catch { setTimeout(loadBills, 3000); }
     }
 
     function startConfirm(table, sid, total) {
       pendingTable = table; pendingSession = sid;
-      document.getElementById('modal-body').innerText = 'Table ' + table + ' — Rs ' + Number(total).toFixed(2) + '. Mark as paid?';
-      document.getElementById('modal-confirm-btn').onclick = doConfirmPayment;
+      document.getElementById('modal-body').textContent = 'Table ' + table + ' — Rs ' + Number(total).toFixed(2) + '. Mark as paid?';
       document.getElementById('confirm-modal').style.display = 'flex';
     }
 
@@ -113,16 +134,23 @@
       pendingTable = null; pendingSession = null;
     }
 
-    async function doConfirmPayment() {
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
+
+    document.getElementById('modal-confirm-btn').addEventListener('click', async () => {
       const table = pendingTable, sid = pendingSession;
+      const pin   = localStorage.getItem('staffPin_counter') || '';
       closeModal();
       try {
-        const res  = await fetch('/table/' + table + '/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: sid }) });
+        const res  = await fetch('/table/' + table + '/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid, pin })
+        });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || 'Checkout failed');
         loadBills();
       } catch (err) { alert(err.message); }
-    }
+    });
 
     loadBills();
     setInterval(loadBills, 5000);

@@ -13,6 +13,9 @@ async function loginWithPin(role, pin) {
   const d = await r.json();
   if (!r.ok) throw new Error(d.message || 'Login failed.');
   setRole(role);
+  // Store PIN so staff API calls (status updates etc.) can include it
+  // It stays in localStorage only for the session; logout clears it
+  localStorage.setItem('staffPin_' + role, pin);
   return true;
 }
 

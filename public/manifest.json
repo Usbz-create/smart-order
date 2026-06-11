@@ -1,13 +1,13 @@
 {
-  "name": "Smart Order - Waiter",
-  "short_name": "Waiter",
-  "start_url": "/waiter.html",
+  "name": "Smart Order",
+  "short_name": "Smart Order",
+  "start_url": "/customer.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2ecc71",
+  "background_color": "#f8fbff",
+  "theme_color": "#1e2d50",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/857/857681.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

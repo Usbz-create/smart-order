@@ -31,26 +31,44 @@
     </div>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script>
+    // Manager page requires admin role
+    requireRole('admin');
+
+    function getPin() { return localStorage.getItem('staffPin_admin') || ''; }
+
+    function esc(str) {
+      return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
     async function loadStats() {
+      const pin = getPin();
       try {
-        const r = await fetch('/manager/stats');
+        const r = await fetch('/manager/stats', { headers: { 'x-admin-pin': pin, 'x-role': 'admin' } });
+        if (!r.ok) throw new Error();
         const d = await r.json();
         document.getElementById('rev-total').innerText = 'Rs ' + Number(d.totalRevenue || 0).toFixed(2);
         document.getElementById('ord-total').innerText = d.totalOrders || 0;
-      } catch {}
+      } catch {
+        document.getElementById('rev-total').innerText = '—';
+      }
     }
 
     async function loadSales() {
       const list = document.getElementById('sales-list');
+      const pin  = getPin();
       try {
-        const r    = await fetch('/sales/today');
+        const r    = await fetch('/sales/today', { headers: { 'x-admin-pin': pin, 'x-role': 'admin' } });
+        if (!r.ok) throw new Error();
         const d    = await r.json();
         const rows = d.rows || [];
         if (!rows.length) { list.innerHTML = '<p style="color:#888;">No served orders yet.</p>'; return; }
         list.innerHTML = rows.map(r =>
           `<div style="display:flex;justify-content:space-between;margin-bottom:8px;padding:8px;background:#f9f9f9;border-radius:8px;">
-            <span><strong>#${r.id}</strong> — Table ${r.tableNumber} <small style="color:#888;">${r.createdAt}</small></span>
+            <span><strong>#${Number(r.id)}</strong> — Table ${esc(String(r.tableNumber))} <small style="color:#888;">${esc(String(r.createdAt))}</small></span>
             <span style="font-weight:bold;color:var(--green);">Rs ${Number(r.totalPrice || 0).toFixed(2)}</span>
           </div>`
         ).join('');
@@ -60,15 +78,21 @@
     async function resetDay() {
       if (!confirm('Clear ALL orders? This cannot be undone.')) return;
       const msg = document.getElementById('reset-msg');
+      const pin = getPin();
       try {
-        const r = await fetch('/orders/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+        const r = await fetch('/orders/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'admin', pin })
+        });
         const d = await r.json();
-        msg.style.color  = '#2b8a3e';
-        msg.innerText    = d.message || 'Day reset!';
+        if (!r.ok) throw new Error(d.message || 'Reset failed.');
+        msg.style.color = '#2b8a3e';
+        msg.innerText   = d.message || 'Day reset!';
         loadStats(); loadSales();
-      } catch {
+      } catch (err) {
         msg.style.color = '#c00';
-        msg.innerText   = 'Reset failed.';
+        msg.innerText   = err.message || 'Reset failed.';
       }
     }
 

@@ -2,6 +2,17 @@ requireRole('waiter');
 
 const ordersContainer = document.getElementById('ordersContainer');
 const logoutBtn       = document.getElementById('logoutBtn');
+const role            = getRole();
+
+// ── XSS helper ────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // ── PWA / install prompt ──────────────────────────────────────────────────
 let deferredInstallPrompt = null;
@@ -37,13 +48,6 @@ function installApp() {
   });
 }
 
-// ── Service worker ────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
-    .then(r => console.log('SW:', r.scope))
-    .catch(e => console.log('SW fail:', e));
-}
-
 // ── Notifications ─────────────────────────────────────────────────────────
 function checkNotificationBanner() {
   const b = document.getElementById('notif-banner');
@@ -52,6 +56,9 @@ function checkNotificationBanner() {
     b.innerHTML = '<span style="font-size:13px;color:#666;">⚠️ Notifications not supported.</span>';
   } else if (Notification.permission === 'granted') {
     b.style.display = 'none';
+  } else if (Notification.permission === 'denied') {
+    // Fixed: was always showing banner even when already denied
+    b.innerHTML = '<span style="font-size:13px;color:#c00;">❌ Notifications blocked. Tap 🔒 → Notifications → Allow to enable.</span>';
   }
 }
 
@@ -69,7 +76,7 @@ function enableNotifications() {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(r => r.showNotification('Smart Order ✅', {
           body: 'Notifications working!',
-          icon: 'https://cdn-icons-png.flaticon.com/512/857/857681.png',
+          icon: '/icons/icon-512.png',
           requireInteraction: false
         }));
       }
@@ -84,7 +91,7 @@ function sendBrowserNotification(title, body) {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(r => r.showNotification(title, {
       body,
-      icon: 'https://cdn-icons-png.flaticon.com/512/857/857681.png',
+      icon: '/icons/icon-512.png',
       requireInteraction: true,
       vibrate: [200, 100, 200],
       data: { url: '/waiter.html' }
@@ -100,6 +107,7 @@ function showToast(msg, color = '#e67e22') {
   if (ex) ex.remove();
   const t = document.createElement('div');
   t.id = 'waiter-toast';
+  // textContent for safety — msg is always a string literal from our own code
   t.textContent = msg;
   t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(200px);background:${color};color:white;padding:16px 24px;border-radius:12px;font-weight:700;font-size:15px;z-index:9999;transition:transform .4s ease;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:90%;text-align:center;`;
   document.body.appendChild(t);
@@ -117,15 +125,16 @@ let isFirstLoad    = true;
 
 function formatItems(items) {
   return items.map(i =>
-    `<li>${i.name} x ${i.quantity} (Rs ${Number(i.unitPrice || 0).toFixed(2)} each)</li>`
+    `<li>${esc(i.name)} x ${Number(i.quantity)} (Rs ${Number(i.unitPrice || 0).toFixed(2)} each)</li>`
   ).join('');
 }
 
 async function updateOrderStatus(id, status) {
+  const pin = localStorage.getItem('staffPin_' + role);
   const r = await fetch('/order/' + id, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status, role, pin })
   });
   if (!r.ok) { const d = await r.json(); throw new Error(d.message || 'Failed to update.'); }
 }
@@ -152,9 +161,9 @@ function renderOrders(orders) {
     html += waiterCalls.map(o =>
       `<article class="order-card" style="border-left:4px solid #e67e22;background:#fffbf0;">
         <p style="font-size:18px;font-weight:700;margin:0 0 4px;">🔔 Waiter Needed!</p>
-        <p style="margin:4px 0;"><strong>Table:</strong> ${o.tableNumber}</p>
+        <p style="margin:4px 0;"><strong>Table:</strong> ${esc(String(o.tableNumber))}</p>
         <div class="button-row" style="margin-top:10px;">
-          <button class="ghost" data-id="${o.id}" data-action="served" style="font-size:13px;padding:6px 14px;">✓ Acknowledged</button>
+          <button class="ghost" data-id="${Number(o.id)}" data-action="served" style="font-size:13px;padding:6px 14px;">✓ Acknowledged</button>
         </div>
       </article>`
     ).join('');
@@ -164,10 +173,10 @@ function renderOrders(orders) {
     html += '<h3 style="color:#27ae60;margin:16px 0 12px;">🍽️ Ready to Serve</h3>';
     html += readyOrders.map(o =>
       `<article class="order-card" style="border-left:4px solid #27ae60;">
-        <p><strong>Order #${o.id}</strong> — Table <strong>${o.tableNumber}</strong></p>
+        <p><strong>Order #${Number(o.id)}</strong> — Table <strong>${esc(String(o.tableNumber))}</strong></p>
         <p><strong>Total:</strong> Rs ${Number(o.totalPrice || 0).toFixed(2)}</p>
         <ul class="order-items">${formatItems(o.items)}</ul>
-        <button class="success" data-id="${o.id}" data-action="served">✅ Mark Served</button>
+        <button class="success" data-id="${Number(o.id)}" data-action="served">✅ Mark Served</button>
       </article>`
     ).join('');
   }
@@ -195,7 +204,11 @@ ordersContainer.addEventListener('click', async e => {
   catch (err) { alert(err.message); t.disabled = false; }
 });
 
-logoutBtn.addEventListener('click', () => { clearRole(); window.location.href = '/index.html'; });
+logoutBtn.addEventListener('click', () => {
+  localStorage.removeItem('staffPin_' + role);
+  clearRole();
+  window.location.href = '/index.html';
+});
 
 checkNotificationBanner();
 loadOrders();

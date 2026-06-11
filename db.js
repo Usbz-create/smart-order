@@ -5,7 +5,6 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-// Wrapper to mimic sqlite3 API so server.js needs zero changes
 const db = {
   get(query, params, callback) {
     const pgQuery = toPostgres(query);
@@ -38,7 +37,6 @@ const db = {
   serialize(fn) { fn(); }
 };
 
-// Convert SQLite ? placeholders → PostgreSQL $1 $2 ...
 function toPostgres(query) {
   let i = 0;
   return query.replace(/\?/g, () => `$${++i}`);
@@ -89,11 +87,10 @@ async function initDB() {
     ON CONFLICT (name) DO NOTHING
   `);
 
-  // Recreate session table with correct schema on every deploy.
-  // Safe — no FK references point here.
-  await pool.query(`DROP TABLE IF EXISTS table_sessions CASCADE`);
+  // Create session table only if it doesn't exist.
+  // We no longer DROP it on every deploy — that was destroying live sessions.
   await pool.query(`
-    CREATE TABLE table_sessions (
+    CREATE TABLE IF NOT EXISTS table_sessions (
       session_id     TEXT PRIMARY KEY,
       table_number   TEXT NOT NULL,
       device_id      TEXT NOT NULL DEFAULT 'legacy',
@@ -101,6 +98,7 @@ async function initDB() {
       locked_at      TIMESTAMP NOT NULL DEFAULT NOW()
     )
   `);
+
   await pool.query(`
     CREATE INDEX IF NOT EXISTS idx_ts_table_device ON table_sessions (table_number, device_id)
   `);

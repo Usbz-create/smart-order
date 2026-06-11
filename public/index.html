@@ -49,6 +49,7 @@
         const data = await res.json();
         if (!res.ok) { msg.innerText = data.message || 'Wrong PIN!'; return; }
         localStorage.setItem('restaurantRole', role);
+        localStorage.setItem('staffPin_' + role, pin);
         if      (role === 'admin')   location.href = '/admin.html';
         else if (role === 'cook')    location.href = '/cook.html';
         else if (role === 'counter') location.href = '/counter.html';
