@@ -65,6 +65,9 @@ setInterval(() => {
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static('public'));
+const pushRoutes = require('./push-routes');
+app.use('/api/push', pushRoutes);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
