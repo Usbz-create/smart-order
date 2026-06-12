@@ -1,5 +1,6 @@
 let cart = [];
 const MAX_ITEMS = 10;
+// Maps Māori table names to their display numbers (for the UI label only)
 const TABLE_NAME_MAP = {
   moana: '1',   maunga: '2',  awa: '3',     ngahere: '4',  repo: '5',
   rangi: '6',   whenua: '7',  makau: '8',   roto: '9',     oneone: '10',
@@ -8,6 +9,9 @@ const TABLE_NAME_MAP = {
   mania: '21',  puke: '22',   waoku: '23',  raorao: '24',  manga: '25',
   wai: '26',    awaawa: '27', takutai: '28', pari: '29',   ana: '30'
 };
+
+// The set of valid table keys (must match server's VALID_TABLES)
+const VALID_TABLE_KEYS = new Set(Object.keys(TABLE_NAME_MAP));
 
 // ── XSS helper — escape any string before injecting into innerHTML ─────────
 function esc(str) {
@@ -36,20 +40,23 @@ const deviceId = getOrCreateDeviceId();
 const urlParams    = new URLSearchParams(window.location.search);
 const tableFromURL = urlParams.get('table');
 if (tableFromURL) {
-  const resolved = TABLE_NAME_MAP[tableFromURL.toLowerCase()];
-  if (resolved) {
+  const tableKey = tableFromURL.trim().toLowerCase();
+  if (VALID_TABLE_KEYS.has(tableKey)) {
     const storedTable = localStorage.getItem('tableNumber');
-    if (storedTable && storedTable !== resolved) localStorage.removeItem('sessionId');
-    localStorage.setItem('tableNumber', resolved);
+    if (storedTable && storedTable !== tableKey) localStorage.removeItem('sessionId');
+    localStorage.setItem('tableNumber', tableKey);                        // store Māori key
+    localStorage.setItem('tableDisplay', TABLE_NAME_MAP[tableKey]);       // store number for UI
   } else {
     localStorage.removeItem('tableNumber');
+    localStorage.removeItem('tableDisplay');
     localStorage.removeItem('sessionId');
   }
   // Strip table param from URL bar so it doesn't sit in browser history
   const cleanUrl = window.location.pathname + (window.location.hash || '');
   history.replaceState(null, '', cleanUrl);
 }
-let tableNumber = localStorage.getItem('tableNumber');
+let tableNumber = localStorage.getItem('tableNumber');   // Māori key — used in all API calls
+let tableDisplay = localStorage.getItem('tableDisplay') || tableNumber; // number — shown in UI
 let sessionId   = localStorage.getItem('sessionId') || null;
 
 // ── Init ──────────────────────────────────────────────────────────────────
@@ -57,7 +64,7 @@ window.addEventListener('load', async () => {
   if (!tableNumber) return; // show QR overlay
 
   document.getElementById('login-overlay').style.display = 'none';
-  document.getElementById('table-num').innerText = 'Table ' + tableNumber;
+  document.getElementById('table-num').innerText = 'Table ' + tableDisplay;
 
   if (sessionId) {
     try {
