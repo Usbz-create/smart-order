@@ -1,9 +1,9 @@
 {
-  "name": "Smart Order",
-  "short_name": "Smart Order",
-  "start_url": "/customer.html",
+  "name": "Smart Order - Staff Login",
+  "short_name": "Login",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#f8fbff",
+  "background_color": "#1e2d50",
   "theme_color": "#1e2d50",
   "icons": [
     {
