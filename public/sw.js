@@ -1,4 +1,4 @@
-const CACHE_NAME    = 'smart-order-v2'; // ⚠ Bump this string on every deploy to bust stale caches
+const CACHE_NAME    = 'smart-order-v3'; // ⚠ Bump this string on every deploy to bust stale caches
 const STATIC_ASSETS = [
   '/',
   '/styles.css',
