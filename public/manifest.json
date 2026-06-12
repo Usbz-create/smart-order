@@ -1,7 +1,7 @@
 {
   "name": "Smart Order",
   "short_name": "Smart Order",
-  "start_url": "/customer.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#f8fbff",
   "theme_color": "#1e2d50",
