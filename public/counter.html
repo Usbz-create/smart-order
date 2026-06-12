@@ -139,7 +139,7 @@
           // Store table/session in data attributes — no inline onclick with string interpolation
           return `<article class="order-card" style="border-left:4px solid #8e44ad;background:#fdf8ff;"
                     data-table="${esc(String(table))}" data-session="${esc(String(sid))}" data-total="${total.toFixed(2)}">
-            <p style="font-size:26px;font-weight:700;margin:0 0 6px;">Table ${esc(String(table))}</p>
+            <p style="font-size:26px;font-weight:700;margin:0 0 6px;">Table ${esc(tableLabel(table))}</p>
             <p style="color:#999;font-size:13px;margin:0 0 8px;font-family:monospace;">Session: ${esc(String(sid))}</p>
             <p style="color:#666;font-size:18px;margin:0 0 12px;">${summary}</p>
             <p style="font-size:30px;font-weight:700;color:#8e44ad;margin:0 0 16px;">Rs ${total.toFixed(2)}</p>
@@ -164,7 +164,7 @@
     function startConfirm(table, sid, total) {
       if (!ensurePin()) { alert('Please re-enter your Counter PIN first (see banner above).'); return; }
       pendingTable = table; pendingSession = sid;
-      document.getElementById('modal-body').textContent = 'Table ' + table + ' — Rs ' + Number(total).toFixed(2) + '. Mark as paid?';
+      document.getElementById('modal-body').textContent = 'Table ' + tableLabel(table) + ' — Rs ' + Number(total).toFixed(2) + '. Mark as paid?';
       document.getElementById('confirm-modal').style.display = 'flex';
     }
 
