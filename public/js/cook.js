@@ -49,7 +49,7 @@ function renderOrders(orders) {
     return `<article class="order-card" style="border-left:4px solid ${color};">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;">
         <div>
-          <p style="margin:0 0 2px;"><strong>Order #${Number(order.id)}</strong> — Table <strong>${esc(String(order.tableNumber))}</strong></p>
+          <p style="margin:0 0 2px;"><strong>Order #${Number(order.id)}</strong> — Table <strong>${esc(tableLabel(order.tableNumber))}</strong></p>
           <span class="status-badge" style="background:${color}20;color:${color};border:1px solid ${color}40;">${label}</span>
           ${blocked ? '<span style="display:inline-block;margin-left:8px;background:#fff0f0;color:#c0392b;border:1px solid #f5c6cb;border-radius:6px;font-size:11px;font-weight:700;padding:2px 8px;vertical-align:middle;">🧾 Bill requested</span>' : ''}
         </div>

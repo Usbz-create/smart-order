@@ -24,7 +24,7 @@ function renderSales(data) {
   if (!rows.length) { salesRows.innerHTML = '<p class="empty">No served orders for today yet.</p>'; return; }
   salesRows.innerHTML = rows.map(r => `<article class="order-card">
     <p><strong>Order ID:</strong> ${Number(r.id)}</p>
-    <p><strong>Table:</strong> ${esc(String(r.tableNumber))}</p>
+    <p><strong>Table:</strong> ${esc(tableLabel(r.tableNumber))}</p>
     <p><strong>Order Price:</strong> Rs ${Number(r.totalPrice || 0).toFixed(2)}</p>
     <p><strong>Time:</strong> ${esc(String(r.createdAt))}</p>
   </article>`).join('');

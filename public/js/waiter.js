@@ -143,8 +143,8 @@ function checkForNewOrders(orders) {
   const ready  = orders.filter(o => o.status === 'ready');
   const waiter = orders.filter(o => o.status === 'call_waiter');
   if (!isFirstLoad) {
-    for (const o of ready)  if (!knownReadyIds.has(String(o.id)))  { const m = '🍽️ Order #' + o.id + ' — Table ' + o.tableNumber + ' is ready!'; sendBrowserNotification('Order Ready! 🍽️', m); showToast(m, '#27ae60'); }
-    for (const o of waiter) if (!knownWaiterIds.has(String(o.id))) { const m = '🔔 Table ' + o.tableNumber + ' is calling for the waiter!'; sendBrowserNotification('Waiter Needed! 🔔', m); showToast(m, '#e67e22'); }
+    for (const o of ready)  if (!knownReadyIds.has(String(o.id)))  { const m = '🍽️ Order #' + o.id + ' — Table ' + tableLabel(o.tableNumber) + ' is ready!'; sendBrowserNotification('Order Ready! 🍽️', m); showToast(m, '#27ae60'); }
+    for (const o of waiter) if (!knownWaiterIds.has(String(o.id))) { const m = '🔔 Table ' + tableLabel(o.tableNumber) + ' is calling for the waiter!'; sendBrowserNotification('Waiter Needed! 🔔', m); showToast(m, '#e67e22'); }
   }
   knownReadyIds  = new Set(ready.map(o => String(o.id)));
   knownWaiterIds = new Set(waiter.map(o => String(o.id)));
@@ -161,7 +161,7 @@ function renderOrders(orders) {
     html += waiterCalls.map(o =>
       `<article class="order-card" style="border-left:4px solid #e67e22;background:#fffbf0;">
         <p style="font-size:18px;font-weight:700;margin:0 0 4px;">🔔 Waiter Needed!</p>
-        <p style="margin:4px 0;"><strong>Table:</strong> ${esc(String(o.tableNumber))}</p>
+        <p style="margin:4px 0;"><strong>Table:</strong> ${esc(tableLabel(o.tableNumber))}</p>
         <div class="button-row" style="margin-top:10px;">
           <button class="ghost" data-id="${Number(o.id)}" data-action="served" style="font-size:13px;padding:6px 14px;">✓ Acknowledged</button>
         </div>
@@ -173,7 +173,7 @@ function renderOrders(orders) {
     html += '<h3 style="color:#27ae60;margin:16px 0 12px;">🍽️ Ready to Serve</h3>';
     html += readyOrders.map(o =>
       `<article class="order-card" style="border-left:4px solid #27ae60;">
-        <p><strong>Order #${Number(o.id)}</strong> — Table <strong>${esc(String(o.tableNumber))}</strong></p>
+        <p><strong>Order #${Number(o.id)}</strong> — Table <strong>${esc(tableLabel(o.tableNumber))}</strong></p>
         <p><strong>Total:</strong> Rs ${Number(o.totalPrice || 0).toFixed(2)}</p>
         <ul class="order-items">${formatItems(o.items)}</ul>
         <button class="success" data-id="${Number(o.id)}" data-action="served">✅ Mark Served</button>
