@@ -42,15 +42,15 @@ async function loadMenuItems() {
         <tbody>
           ${items.map((item, i) => `
           <tr>
-            <td style="color:var(--slate);font-size:12px;font-weight:600;">${i + 1}</td>
-            <td><input type="text" value="${esc(item.name)}" data-name-id="${Number(item.id)}" style="min-width:160px;" /></td>
-            <td><input type="number" min="0" step="0.01" value="${Number(item.price || 0).toFixed(2)}" data-price-id="${Number(item.id)}" style="width:100px;" /></td>
-            <td>
+            <td data-label="#" style="color:var(--slate);font-size:12px;font-weight:600;">${i + 1}</td>
+            <td data-label="Item Name"><input type="text" value="${esc(item.name)}" data-name-id="${Number(item.id)}" style="min-width:160px;" /></td>
+            <td data-label="Price (Rs)"><input type="number" min="0" step="0.01" value="${Number(item.price || 0).toFixed(2)}" data-price-id="${Number(item.id)}" style="width:100px;" /></td>
+            <td data-label="Status">
               <button class="badge ${item.isActive ? 'badge-active' : 'badge-inactive'}" data-active-id="${Number(item.id)}" data-active-val="${item.isActive ? 1 : 0}">
                 ${item.isActive ? '✓ Active' : '○ Inactive'}
               </button>
             </td>
-            <td>
+            <td data-label="Actions">
               <div class="actions-cell">
                 <button class="btn btn-success btn-sm" data-save-id="${Number(item.id)}">Save</button>
                 <button class="btn btn-danger btn-sm" data-delete-id="${Number(item.id)}">Delete</button>

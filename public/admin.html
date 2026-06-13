@@ -356,6 +356,49 @@
       .form-grid { grid-template-columns: 1fr; }
       .menu-add-row { grid-template-columns: 1fr 1fr; }
       .menu-add-row .btn { grid-column: 1/-1; }
+
+      /* ── Menu table → card layout on mobile ── */
+      .menu-table thead { display: none; }
+      .menu-table,
+      .menu-table tbody,
+      .menu-table tr,
+      .menu-table td { display: block; width: 100%; }
+
+      .menu-table tr {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 12px;
+        padding: 12px;
+        background: var(--white);
+      }
+
+      .menu-table td {
+        border: none;
+        padding: 4px 0;
+      }
+
+      .menu-table td[data-label]::before {
+        content: attr(data-label) ": ";
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        color: var(--slate);
+        display: block;
+        margin-bottom: 4px;
+      }
+
+      .menu-table td input[type="text"],
+      .menu-table td input[type="number"] {
+        width: 100%;
+      }
+
+      .actions-cell {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border);
+        justify-content: flex-end;
+      }
     }
   </style>
 </head>
