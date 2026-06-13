@@ -2,8 +2,6 @@ requireRole('cook');
 
 const ordersContainer = document.getElementById('ordersContainer');
 const logoutBtn       = document.getElementById('logoutBtn');
-const resetOrdersForm = document.getElementById('resetOrdersForm');
-const resetMessage    = document.getElementById('resetMessage');
 
 // ── XSS helper ────────────────────────────────────────────────────────────
 function esc(str) {
@@ -49,7 +47,7 @@ function renderOrders(orders) {
     return `<article class="order-card" style="border-left:4px solid ${color};">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;">
         <div>
-          <p style="margin:0 0 2px;"><strong>Order #${Number(order.id)}</strong> — Table <strong>${esc(tableLabel(order.tableNumber))}</strong></p>
+          <p style="margin:0 0 2px;"><strong>Order #${Number(order.id)}</strong> — Table <strong>${esc(String(order.tableNumber))}</strong></p>
           <span class="status-badge" style="background:${color}20;color:${color};border:1px solid ${color}40;">${label}</span>
           ${blocked ? '<span style="display:inline-block;margin-left:8px;background:#fff0f0;color:#c0392b;border:1px solid #f5c6cb;border-radius:6px;font-size:11px;font-weight:700;padding:2px 8px;vertical-align:middle;">🧾 Bill requested</span>' : ''}
         </div>
@@ -88,26 +86,6 @@ logoutBtn.addEventListener('click', () => {
   localStorage.removeItem('staffPin_' + role);
   clearRole();
   window.location.href = './index.html';
-});
-
-resetOrdersForm.addEventListener('submit', async e => {
-  e.preventDefault();
-  resetMessage.className = 'message';
-  if (!confirm('This will clear all orders and reset IDs. Continue?')) return;
-  const pin = document.getElementById('cookPinInput').value.trim();
-  try {
-    const r = await fetch('/orders/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'cook', pin })
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.message || 'Failed to reset orders.');
-    resetMessage.classList.add('ok');
-    resetMessage.textContent = d.message;
-    resetOrdersForm.reset();
-    await loadOrders();
-  } catch (err) { resetMessage.classList.add('error'); resetMessage.textContent = err.message; }
 });
 
 loadOrders();

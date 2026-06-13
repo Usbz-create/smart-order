@@ -51,6 +51,19 @@
       <div id="menuAdminList" class="orders"></div>
     </section>
 
+    <section class="card">
+      <h2>Reset Daily Orders</h2>
+      <p class="small-note">Clears all orders and resets Order ID to 1.</p>
+      <form id="resetOrdersForm" class="role-form">
+        <input id="resetPinInput" type="password" placeholder="Admin PIN" required />
+        <button type="submit" class="danger">Reset Orders</button>
+      </form>
+      <p id="resetMessage" class="message"></p>
+      <p style="margin-top:10px;padding:10px 14px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;font-size:13px;color:#856404;">
+        ⚠️ <strong>Warning:</strong> Resetting orders will also permanently clear all of today's sales data. This cannot be undone.
+      </p>
+    </section>
+
     <nav class="card nav-links">
       <a href="./sales.html">Today's Sales</a>
       <a href="./index.html">Back to Role Selection</a>

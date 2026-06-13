@@ -130,4 +130,24 @@ logoutBtn.addEventListener('click', () => {
   window.location.href = './index.html';
 });
 
+document.getElementById('resetOrdersForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const resetMessage = document.getElementById('resetMessage');
+  resetMessage.className = 'message';
+  if (!confirm('This will clear ALL orders and today\'s sales data, and reset Order IDs. This cannot be undone. Continue?')) return;
+  const pin = document.getElementById('resetPinInput').value.trim();
+  try {
+    const r = await fetch('/orders/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'admin', pin })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.message || 'Failed to reset orders.');
+    resetMessage.classList.add('ok');
+    resetMessage.textContent = d.message;
+    document.getElementById('resetOrdersForm').reset();
+  } catch (err) { resetMessage.classList.add('error'); resetMessage.textContent = err.message; }
+});
+
 loadMenuItems();
