@@ -5,75 +5,509 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Dashboard | Smart Order</title>
   <link rel="manifest" href="/manifest-admin.json" />
-  <meta name="theme-color" content="#6c3483" />
+  <meta name="theme-color" content="#7c3aed" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Admin" />
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:    #0f172a;
+      --navy2:   #1e293b;
+      --purple:  #7c3aed;
+      --purple2: #6d28d9;
+      --purple-light: #ede9fe;
+      --red:     #dc2626;
+      --red-light: #fef2f2;
+      --green:   #16a34a;
+      --green-light: #f0fdf4;
+      --slate:   #64748b;
+      --border:  #e2e8f0;
+      --bg:      #f8fafc;
+      --white:   #ffffff;
+      --text:    #0f172a;
+      --text2:   #475569;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 240px;
+      min-height: 100vh;
+      background: var(--navy);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+
+    .sidebar-brand .brand-icon {
+      font-size: 28px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .sidebar-brand h1 {
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: .3px;
+    }
+
+    .sidebar-brand p {
+      font-size: 11px;
+      color: rgba(255,255,255,.4);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .sidebar-nav {
+      padding: 16px 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: rgba(255,255,255,.55);
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      text-decoration: none;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+
+    .nav-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+    .nav-item.active { background: var(--purple); color: #fff; }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 16px 12px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    /* ── Main content ── */
+    .main {
+      margin-left: 240px;
+      flex: 1;
+      padding: 32px;
+      max-width: calc(100vw - 240px);
+    }
+
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .page-header h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .page-header p {
+      font-size: 13px;
+      color: var(--slate);
+      margin-top: 3px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Forms ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    select {
+      padding: 10px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--white);
+      transition: border-color .15s, box-shadow .15s;
+      outline: none;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 3px rgba(124,58,237,.12);
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s, transform .1s;
+    }
+
+    .btn:active { transform: scale(.98); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .btn-primary  { background: var(--purple); color: #fff; }
+    .btn-primary:hover  { background: var(--purple2); }
+    .btn-danger   { background: var(--red); color: #fff; }
+    .btn-danger:hover   { opacity: .88; }
+    .btn-ghost    { background: var(--bg); border: 1.5px solid var(--border); color: var(--text2); }
+    .btn-ghost:hover    { background: var(--border); }
+    .btn-success  { background: #16a34a; color: #fff; }
+    .btn-success:hover  { opacity: .88; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+
+    /* ── Message ── */
+    .message {
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-top: 14px;
+      display: none;
+    }
+    .message.ok    { display: block; background: var(--green-light); color: var(--green); border: 1px solid #bbf7d0; }
+    .message.error { display: block; background: var(--red-light);   color: var(--red);   border: 1px solid #fecaca; }
+
+    /* ── Menu table ── */
+    .menu-add-row {
+      display: grid;
+      grid-template-columns: 1fr 140px auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+
+    .menu-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .menu-table th {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      color: var(--slate);
+      padding: 8px 12px;
+      text-align: left;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .menu-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    .menu-table tr:last-child td { border-bottom: none; }
+
+    .menu-table tr:hover td { background: #fafafa; }
+
+    .menu-table input[type="text"],
+    .menu-table input[type="number"] {
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      border: none;
+      transition: background .15s;
+    }
+
+    .badge-active   { background: var(--green-light); color: var(--green); }
+    .badge-inactive { background: #f1f5f9; color: var(--slate); }
+
+    .actions-cell { display: flex; gap: 8px; align-items: center; }
+
+    /* ── Reset danger zone ── */
+    .danger-zone {
+      border: 1.5px solid #fecaca;
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+      background: #fffafa;
+    }
+
+    .danger-zone .card-title { color: var(--red); }
+    .danger-zone .card-title::after { background: #fecaca; }
+
+    .danger-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .warning-note {
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      font-size: 12.5px;
+      color: #92400e;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    /* ── Tabs (sidebar sections) ── */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .sidebar { width: 100%; min-height: auto; position: relative; flex-direction: row; flex-wrap: wrap; }
+      .main { margin-left: 0; padding: 16px; max-width: 100%; }
+      body { flex-direction: column; }
+      .form-grid { grid-template-columns: 1fr; }
+      .menu-add-row { grid-template-columns: 1fr 1fr; }
+      .menu-add-row .btn { grid-column: 1/-1; }
+    }
+  </style>
 </head>
 <body>
-  <main class="container">
 
-    <header class="hero dashboard-hero admin-role">
-      <div>
-        <h1>Admin Dashboard</h1>
-        <p class="subtitle">Update role passwords and customer menu items.</p>
-      </div>
-      <button id="logoutBtn" class="ghost">Logout</button>
-    </header>
-
-    <section class="card">
-      <h2>Change Staff Passwords</h2>
-      <form id="passwordForm" class="stack-form">
-        <label for="adminPinInput">Admin PIN</label>
-        <input id="adminPinInput" type="password" required />
-        <label for="targetRole">Target Role</label>
-        <select id="targetRole">
-          <option value="cook">Cook</option>
-          <option value="waiter">Waiter</option>
-          <option value="counter">Counter</option>
-          <option value="admin">Admin (change your own PIN)</option>
-        </select>
-        <label for="newPinInput">New PIN</label>
-        <input id="newPinInput" type="password" minlength="4" maxlength="20" required />
-        <button type="submit">Update Password</button>
-        <p id="passwordMessage" class="message"></p>
-      </form>
-    </section>
-
-    <section class="card">
-      <h2>Menu Management</h2>
-      <form id="addItemForm" class="role-form">
-        <input id="newItemName"  type="text"   placeholder="New item name" required />
-        <input id="newItemPrice" type="number" min="0" step="0.01" placeholder="Price" required />
-        <button type="submit">Add Item</button>
-      </form>
-      <p id="menuMessage" class="message"></p>
-      <div id="menuAdminList" class="orders"></div>
-    </section>
-
-    <section class="card">
-      <h2>Reset Daily Orders</h2>
-      <p class="small-note">Clears all orders and resets Order ID to 1.</p>
-      <form id="resetOrdersForm" class="role-form">
-        <input id="resetPinInput" type="password" placeholder="Admin PIN" required />
-        <button type="submit" class="danger">Reset Orders</button>
-      </form>
-      <p id="resetMessage" class="message"></p>
-      <p style="margin-top:10px;padding:10px 14px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;font-size:13px;color:#856404;">
-        ⚠️ <strong>Warning:</strong> Resetting orders will also permanently clear all of today's sales data. This cannot be undone.
-      </p>
-    </section>
-
-    <nav class="card nav-links">
-      <a href="./sales.html">Today's Sales</a>
-      <a href="./index.html">Back to Role Selection</a>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">⚙️</span>
+      <h1>Smart Order</h1>
+      <p>Admin Panel</p>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showSection('passwords', this)">
+        <span class="nav-icon">🔑</span> Staff Passwords
+      </button>
+      <button class="nav-item" onclick="showSection('menu', this)">
+        <span class="nav-icon">🍜</span> Menu Items
+      </button>
+      <button class="nav-item" onclick="showSection('reset', this)">
+        <span class="nav-icon">🔄</span> Reset Orders
+      </button>
+      <a href="./sales.html" class="nav-item">
+        <span class="nav-icon">📊</span> Today's Sales
+      </a>
     </nav>
+    <div class="sidebar-footer">
+      <button id="logoutBtn" class="nav-item" style="color:#f87171;">
+        <span class="nav-icon">🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- Staff Passwords -->
+    <div id="section-passwords" class="section active">
+      <div class="page-header">
+        <div>
+          <h2>Staff Passwords</h2>
+          <p>Update PINs for any staff role.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🔑 Change PIN</div>
+        <form id="passwordForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="adminPinInput">Your Admin PIN</label>
+              <input id="adminPinInput" type="password" placeholder="Enter your current PIN" required />
+            </div>
+            <div class="form-group">
+              <label for="targetRole">Target Role</label>
+              <select id="targetRole">
+                <option value="cook">👨‍🍳 Cook</option>
+                <option value="waiter">🛎️ Waiter</option>
+                <option value="counter">🧾 Counter</option>
+                <option value="admin">⚙️ Admin (your own PIN)</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label for="newPinInput">New PIN</label>
+              <input id="newPinInput" type="password" minlength="4" maxlength="20" placeholder="Minimum 4 characters" required />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top:16px;">Update PIN</button>
+          <p id="passwordMessage" class="message"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Menu Management -->
+    <div id="section-menu" class="section">
+      <div class="page-header">
+        <div>
+          <h2>Menu Items</h2>
+          <p>Add, edit, price, and toggle visibility of menu items.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">➕ Add New Item</div>
+        <form id="addItemForm">
+          <div class="menu-add-row">
+            <div class="form-group">
+              <label for="newItemName">Item Name</label>
+              <input id="newItemName" type="text" placeholder="e.g. Veg Momo" required />
+            </div>
+            <div class="form-group">
+              <label for="newItemPrice">Price (Rs)</label>
+              <input id="newItemPrice" type="number" min="0" step="0.01" placeholder="0.00" required />
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-primary">Add Item</button>
+            </div>
+          </div>
+        </form>
+        <p id="menuMessage" class="message"></p>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="padding:20px 24px 0;">
+          <div class="card-title">📋 All Items</div>
+        </div>
+        <div id="menuAdminList"></div>
+      </div>
+    </div>
+
+    <!-- Reset Orders -->
+    <div id="section-reset" class="section">
+      <div class="page-header">
+        <div>
+          <h2>Reset Orders</h2>
+          <p>Clear all orders and restart the daily cycle.</p>
+        </div>
+      </div>
+      <div class="danger-zone">
+        <div class="card-title" style="color:var(--red);">🔄 Reset Daily Orders</div>
+        <p style="font-size:13.5px;color:var(--text2);margin-bottom:16px;">
+          Clears all orders and resets Order ID back to 1. Use this at the start of each day.
+        </p>
+        <form id="resetOrdersForm">
+          <div class="danger-row">
+            <div class="form-group">
+              <label for="resetPinInput">Admin PIN</label>
+              <input id="resetPinInput" type="password" placeholder="Enter your Admin PIN to confirm" required />
+            </div>
+            <div class="form-group">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn btn-danger">Reset Orders</button>
+            </div>
+          </div>
+        </form>
+        <div class="warning-note">
+          ⚠️ <span><strong>This cannot be undone.</strong> Resetting orders will permanently clear all of today's sales data as well.</span>
+        </div>
+        <p id="resetMessage" class="message"></p>
+      </div>
+    </div>
 
   </main>
 
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW fail:', e));
+    }
+
+    function showSection(name, el) {
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('section-' + name).classList.add('active');
+      if (el) el.classList.add('active');
     }
   </script>
   <script src="/js/auth.js"></script>

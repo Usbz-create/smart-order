@@ -24,19 +24,54 @@ async function loadMenuItems() {
     });
     if (!r.ok) { const d = await r.json(); throw new Error(d.message); }
     const items = await r.json();
-    if (!items.length) { menuAdminList.innerHTML = '<p class="empty">No menu items found.</p>'; return; }
-    menuAdminList.innerHTML = items.map(item => `<article class="order-card">
-      <div class="admin-item-row">
-        <input type="text"   value="${esc(item.name)}"                        data-name-id="${Number(item.id)}" />
-        <input type="number" min="0" step="0.01" value="${Number(item.price || 0).toFixed(2)}" data-price-id="${Number(item.id)}" />
-        <label class="inline-check">
-          <input type="checkbox" data-active-id="${Number(item.id)}" ${item.isActive ? 'checked' : ''} /> Active
-        </label>
-        <button data-save-id="${Number(item.id)}"   class="secondary">Save</button>
-        <button data-delete-id="${Number(item.id)}" class="danger">Delete</button>
-      </div>
-    </article>`).join('');
-  } catch (err) { menuAdminList.innerHTML = `<p class="empty">${esc(err.message || 'Failed to load menu.')}</p>`; }
+    if (!items.length) {
+      menuAdminList.innerHTML = '<p style="padding:20px 24px;color:#888;font-size:14px;">No menu items yet. Add one above.</p>';
+      return;
+    }
+    menuAdminList.innerHTML = `
+      <table class="menu-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item Name</th>
+            <th>Price (Rs)</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map((item, i) => `
+          <tr>
+            <td style="color:var(--slate);font-size:12px;font-weight:600;">${i + 1}</td>
+            <td><input type="text" value="${esc(item.name)}" data-name-id="${Number(item.id)}" style="min-width:160px;" /></td>
+            <td><input type="number" min="0" step="0.01" value="${Number(item.price || 0).toFixed(2)}" data-price-id="${Number(item.id)}" style="width:100px;" /></td>
+            <td>
+              <button class="badge ${item.isActive ? 'badge-active' : 'badge-inactive'}" data-active-id="${Number(item.id)}" data-active-val="${item.isActive ? 1 : 0}">
+                ${item.isActive ? '✓ Active' : '○ Inactive'}
+              </button>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn btn-success btn-sm" data-save-id="${Number(item.id)}">Save</button>
+                <button class="btn btn-danger btn-sm" data-delete-id="${Number(item.id)}">Delete</button>
+              </div>
+            </td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    // Toggle active badge click
+    menuAdminList.querySelectorAll('[data-active-id]').forEach(badge => {
+      badge.addEventListener('click', () => {
+        const cur = Number(badge.dataset.activeVal);
+        const next = cur === 1 ? 0 : 1;
+        badge.dataset.activeVal = next;
+        badge.className = 'badge ' + (next ? 'badge-active' : 'badge-inactive');
+        badge.textContent = next ? '✓ Active' : '○ Inactive';
+      });
+    });
+
+  } catch (err) { menuAdminList.innerHTML = `<p style="padding:20px 24px;color:var(--red);font-size:14px;">${esc(err.message || 'Failed to load menu.')}</p>`; }
 }
 
 function esc(str) {
@@ -99,7 +134,7 @@ menuAdminList.addEventListener('click', async e => {
     if (sid) {
       const n = document.querySelector(`[data-name-id="${sid}"]`).value.trim();
       const p = Number(document.querySelector(`[data-price-id="${sid}"]`).value);
-      const a = document.querySelector(`[data-active-id="${sid}"]`).checked;
+      const a = Number(document.querySelector(`[data-active-id="${sid}"]`).dataset.activeVal) === 1;
       const r = await fetch('/admin/menu/' + Number(sid), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -128,26 +163,6 @@ logoutBtn.addEventListener('click', () => {
   localStorage.removeItem('staffPin_admin');
   clearRole();
   window.location.href = './index.html';
-});
-
-document.getElementById('resetOrdersForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const resetMessage = document.getElementById('resetMessage');
-  resetMessage.className = 'message';
-  if (!confirm('This will clear ALL orders and today\'s sales data, and reset Order IDs. This cannot be undone. Continue?')) return;
-  const pin = document.getElementById('resetPinInput').value.trim();
-  try {
-    const r = await fetch('/orders/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'admin', pin })
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.message || 'Failed to reset orders.');
-    resetMessage.classList.add('ok');
-    resetMessage.textContent = d.message;
-    document.getElementById('resetOrdersForm').reset();
-  } catch (err) { resetMessage.classList.add('error'); resetMessage.textContent = err.message; }
 });
 
 loadMenuItems();
