@@ -147,9 +147,10 @@ async function loadMenu() {
 
 function itemEmoji(name) {
   const n = name.toLowerCase();
-  if (n.includes('roll'))     return '&#x1F32F;';
-  if (n.includes('momo'))     return '&#x1F95F;';
-  if (n.includes('chow') || n.includes('noodle')) return '&#x1F35C;';
+  if (n.includes('roll'))                          return '&#x1F32F;'; // e.g. Chips Roll
+  if (n.includes('chow') && n.includes('chips'))  return '&#x1F32F;'; // e.g. Chow Chow Chips — roll style
+  if (n.includes('momo'))                          return '&#x1F95F;';
+  if (n.includes('chow') || n.includes('noodle')) return '&#x1F35C;'; // plain chow / noodle dish
   if (n.includes('fries') || n.includes('chips'))  return '&#x1F35F;';
   if (n.includes('chicken'))  return '&#x1F357;';
   if (n.includes('egg'))      return '&#x1F373;';

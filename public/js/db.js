@@ -79,13 +79,7 @@ async function initDB() {
     ON CONFLICT (role) DO NOTHING
   `);
 
-  await pool.query(`
-    INSERT INTO menu_items (name, price, is_active) VALUES
-      ('Momo',     120, 1),
-      ('Chowmein', 100, 1),
-      ('Coke',      60, 1)
-    ON CONFLICT (name) DO NOTHING
-  `);
+  // Menu items are managed via the Admin panel — no seed data here.
 
   // Create session table only if it doesn't exist.
   // We no longer DROP it on every deploy — that was destroying live sessions.
